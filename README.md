@@ -1,7 +1,8 @@
 # Bourse Tracker
 
-Suivi personnel d'un **PEA** (actions et ETF européens, en EUR) : journal daté de chaque ordre, valeur du
-portefeuille en quasi temps réel, alertes par Discord et email.
+Suivi d'un **PEA** (actions et ETF européens, en EUR) : journal daté de chaque ordre, valeur du
+portefeuille en quasi temps réel, alertes par Discord et email. Plusieurs comptes, sur invitation :
+chacun ne voit que ses propres ordres, alertes, réglages et titres.
 
 ## Fonctionnalités
 
@@ -15,7 +16,10 @@ portefeuille en quasi temps réel, alertes par Discord et email.
 - **Historique** : courbe de la valeur du portefeuille, gain **hors apports** (un achat n'est pas de la
   performance) et rendement sur 1 M, 3 M, depuis janvier, 1 A ou Tout.
 - **Résumé quotidien** à l'heure choisie, jours de bourse seulement.
-- **Supervision** : alerte si la source de prix est muette en séance, ping Healthchecks.io du worker.
+- **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
+  Healthchecks.io du worker.
+- **Comptes** : le premier compte est administrateur et crée des liens d'invitation (un compte par lien,
+  7 jours). La base refuse toute inscription sans invitation valide.
 
 ## Architecture
 

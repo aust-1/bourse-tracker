@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Page } from '@playwright/test';
 import { SERVICE_ROLE_KEY, SUPABASE_URL, TEST_EMAIL, TEST_PASSWORD } from './env';
+import { ensureUser } from './users';
 
 export const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -19,20 +20,15 @@ export async function resetData() {
   await admin.from('price_history').delete().not('instrument_id', 'is', null);
   await admin.from('instruments').delete().not('id', 'is', null);
 
-  const list = await admin.auth.admin.listUsers();
-  let user = list.data.users.find((u) => u.email === TEST_EMAIL);
-  if (!user) {
-    const created = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    });
-    if (created.error) throw created.error;
-    user = created.data.user;
-  }
+  const userId = await ensureUser(admin, TEST_EMAIL, TEST_PASSWORD);
   const inst = await admin.from('instruments').insert(CW8).select('id').single();
   if (inst.error) throw inst.error;
-  return { userId: user.id, instrumentId: inst.data.id };
+  // l'utilisateur ne voit que les instruments qu'il suit
+  const link = await admin
+    .from('user_instruments')
+    .insert({ user_id: userId, instrument_id: inst.data.id });
+  if (link.error) throw link.error;
+  return { userId, instrumentId: inst.data.id };
 }
 
 export async function login(page: Page) {

@@ -13,8 +13,13 @@ npx supabase db push          # applique les migrations du dossier supabase/migr
 Dans le tableau de bord Supabase :
 
 1. **Authentication → Users → Add user** : crée ton compte (email + mot de passe, « Auto Confirm User »).
-2. **Authentication → Sign In / Providers → Email** : désactive **Allow new users to sign up**.
-   Sans cela, n'importe qui pourrait créer un compte sur ton instance.
+   Le premier compte de l'instance en est l'**administrateur** : lui seul peut inviter d'autres personnes.
+2. **Authentication → Sign In / Providers → Email** : laisse **Allow new users to sign up** activé (les
+   invités s'inscrivent eux-mêmes) mais **désactive « Confirm email »** : l'envoi d'emails intégré de
+   Supabase ne dessert que les membres de ton équipe Supabase. L'inscription reste fermée au public :
+   la base refuse tout nouveau compte sans code d'invitation valide (trigger sur `auth.users`), ce qui
+   bloque aussi « Add user » pour tout compte autre que le premier. Mets aussi **Minimum password
+   length** à 8.
 3. **Settings → API** : note l'URL, la clé `anon` et la clé `service_role`.
 4. **Database → Replication** (ou `supabase_realtime` publication) : la table `quotes_latest` doit y figurer
    (la migration s'en charge ; vérifie-le si le tableau de bord ne se met pas à jour en direct).
@@ -27,7 +32,9 @@ Dans le tableau de bord Supabase :
 | Resend          | Créer un compte, générer une clé API                                                                     | `RESEND_API_KEY`        |
 | Healthchecks.io | Créer un check « worker » : période 1 min, délai de grâce 5 min ; ajouter ton email en canal             | `HEALTHCHECKS_PING_URL` |
 
-Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte : c'est suffisant pour un usage personnel.
+Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte Resend : les alertes par email ne
+partiront que vers toi. Pour que les personnes invitées reçoivent aussi leurs emails, vérifie un domaine
+dans Resend et mets à jour `EMAIL_FROM` ; sinon, elles utilisent Discord.
 
 ## 3. VPS
 
@@ -88,7 +95,24 @@ Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
 une seule fois depuis un réseau de confiance : `ssh-keyscan -t ed25519 <ip-du-vps>`. Elle est épinglée dans le workflow
 (`StrictHostKeyChecking=yes`), de sorte qu'un intercepteur ne puisse pas se faire passer pour ton serveur. À chaque `push` sur `main` dont la CI est verte, le VPS exécute `infra/deploy.sh`.
 
-## 6. Première séance : mesurer le retard de Yahoo
+## 6. Inviter quelqu'un
+
+Menu **Invitations** (visible de l'administrateur seulement) : **Créer un lien d'invitation**, puis
+envoyer le lien. Il crée un seul compte et expire au bout de 7 jours ; tant qu'il n'est pas utilisé,
+il se révoque d'un clic. Chaque compte a ses propres ordres, alertes, réglages et titres suivis.
+Les cotes d'un titre sont partagées (une seule requête à Yahoo par titre), mais un compte ne voit que
+les titres qu'il suit. Les messages système (source de prix en panne) ne vont qu'aux administrateurs.
+
+**Passer une installation existante en multi-utilisateur**, dans cet ordre :
+
+1. `npx supabase db push` applique la migration `20260928000000_multi_user.sql`. Ton compte devient
+   administrateur et garde tous les titres déjà enregistrés ; tes ordres, alertes et réglages lui
+   restent rattachés. À faire **avant** de pousser le code sur `main` : le nouveau site appelle des
+   fonctions que crée cette migration (le déploiement automatique n'applique pas les migrations).
+2. Ajuste les réglages d'authentification de l'étape 1.
+3. Pousse le code sur `main` (ou `./infra/deploy.sh` sur le VPS).
+
+## 7. Première séance : mesurer le retard de Yahoo
 
 Le retard des cotes Euronext sur Yahoo n'a pas pu être mesuré hors séance. Un jour de bourse, pendant la séance :
 
@@ -100,7 +124,7 @@ Le champ `maxQuoteLagSeconds` (avec `marketOpen: true`) donne le retard réel. S
 Yahoo sert des cotes différées : le tableau de bord l'affiche (badge « Différé de N min ») et les alertes
 de prix sont évaluées sur ces cotes différées. Pour du temps réel, voir le plan B ci-dessous.
 
-## 7. Que faire quand…
+## 8. Que faire quand…
 
 **Alerte « Source de prix indisponible »** (Discord/email) : Yahoo ne répond plus depuis plus de 5 minutes en séance.
 Regarder `docker compose logs worker`. Si l'API a changé de format, le smoke test nocturne de GitHub (« Smoke test Yahoo »)
