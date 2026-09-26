@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { login, mockInstrumentSearch, resetData } from './support';
 
 test.beforeEach(async ({ page }) => {
@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function fillOrder(
-  page: import('@playwright/test').Page,
+  page: Page,
   o: { side: 'Achat' | 'Vente'; qty: string; price: string; fees?: string; when: string },
 ) {
   await page.goto('/orders/new');
