@@ -81,3 +81,20 @@ export function isPollingWindow(at: Date): boolean {
   const m = parisMinutes(at);
   return isWeekday(at) && m >= OPEN - 5 && m <= CLOSE + 10;
 }
+
+/** Convertit une saisie `YYYY-MM-DDTHH:mm` (heure de Paris) en instant UTC. */
+export function parisLocalToDate(local: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!m) throw new Error(`Date invalide : ${local}`);
+  const [y, mo, d, h, mi] = m.slice(1).map(Number) as [number, number, number, number, number];
+  const asUtc = Date.UTC(y, mo - 1, d, h, mi);
+  let at = asUtc - offsetMinutes(new Date(asUtc)) * 60000;
+  at = asUtc - offsetMinutes(new Date(at)) * 60000;
+  return new Date(at);
+}
+
+/** Inverse : instant → `YYYY-MM-DDTHH:mm` à Paris (valeur d'un input datetime-local). */
+export function toParisLocal(at: Date | string): string {
+  const p = parts(new Date(at));
+  return `${p.y}-${pad(p.m)}-${pad(p.d)}T${pad(p.h)}:${pad(p.min)}`;
+}

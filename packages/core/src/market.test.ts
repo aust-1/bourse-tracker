@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { isMarketOpen, isPollingWindow, parisDate, parisDayStart, parisMinutes } from './market';
+import {
+  isMarketOpen,
+  isPollingWindow,
+  parisDate,
+  parisDayStart,
+  parisLocalToDate,
+  parisMinutes,
+  toParisLocal,
+} from './market';
 
 describe('market', () => {
   it('date et minutes à Paris (été, UTC+2)', () => {
@@ -32,5 +40,16 @@ describe('market', () => {
   it("début de journée les jours de changement d'heure", () => {
     expect(parisDayStart('2026-03-29').toISOString()).toBe('2026-03-28T23:00:00.000Z');
     expect(parisDayStart('2026-10-25').toISOString()).toBe('2026-10-24T22:00:00.000Z');
+  });
+
+  it('saisie locale Paris <-> UTC (été et hiver)', () => {
+    expect(parisLocalToDate('2026-07-01T10:30').toISOString()).toBe('2026-07-01T08:30:00.000Z');
+    expect(parisLocalToDate('2026-01-15T10:30').toISOString()).toBe('2026-01-15T09:30:00.000Z');
+    expect(toParisLocal(new Date('2026-07-01T08:30:00Z'))).toBe('2026-07-01T10:30');
+    expect(toParisLocal(parisLocalToDate('2026-10-25T09:15'))).toBe('2026-10-25T09:15');
+  });
+
+  it('saisie locale invalide -> erreur', () => {
+    expect(() => parisLocalToDate('hier')).toThrow();
   });
 });

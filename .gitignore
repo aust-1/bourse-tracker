@@ -10,3 +10,5 @@ coverage
 supabase/.temp
 supabase/.branches
 next-env.d.ts
+test-results
+playwright-report

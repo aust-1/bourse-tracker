@@ -11,7 +11,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@bourse/core": "workspace:*"
+    "@bourse/core": "workspace:*",
+    "@bourse/db": "workspace:*",
+    "@bourse/providers": "workspace:*",
+    "@supabase/supabase-js": "^2.117.1"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
