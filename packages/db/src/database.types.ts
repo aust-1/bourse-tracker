@@ -184,30 +184,6 @@ export type Database = {
           },
         ];
       };
-      portfolio_snapshots: {
-        Row: {
-          cost_basis: number;
-          date: string;
-          market_value: number;
-          realized_pl: number;
-          user_id: string;
-        };
-        Insert: {
-          cost_basis: number;
-          date: string;
-          market_value: number;
-          realized_pl: number;
-          user_id: string;
-        };
-        Update: {
-          cost_basis?: number;
-          date?: string;
-          market_value?: number;
-          realized_pl?: number;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       price_history: {
         Row: {
           close: number;

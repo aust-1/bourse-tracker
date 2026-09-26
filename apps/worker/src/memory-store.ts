@@ -31,6 +31,26 @@ export class MemoryStore implements Store {
     this.cycles.push(result);
   }
 
+  firstOrders = new Map<string, string>();
+
+  async getHistoryBounds(instrumentId: string) {
+    const dates = (this.closes.get(instrumentId) ?? []).map((c) => c.date).sort();
+    return { min: dates[0] ?? null, max: dates[dates.length - 1] ?? null };
+  }
+
+  async getFirstOrderDate(instrumentId: string) {
+    return this.firstOrders.get(instrumentId) ?? null;
+  }
+
+  async upsertCloses(rows: readonly { instrumentId: string; date: string; close: number }[]) {
+    for (const r of rows) {
+      const list = (this.closes.get(r.instrumentId) ?? []).filter((c) => c.date !== r.date);
+      list.push({ date: r.date, close: r.close });
+      list.sort((a, b) => a.date.localeCompare(b.date));
+      this.closes.set(r.instrumentId, list);
+    }
+  }
+
   alerts: (AlertRow & { status: 'active' | 'triggered' })[] = [];
   orders: (Order & { userId: string; instrumentId: string })[] = [];
   settings: UserSettings[] = [];

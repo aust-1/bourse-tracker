@@ -38,6 +38,13 @@ describe('buildSnapshots', () => {
     expect(s[3]).toMatchObject({ marketValue: 660, costBasis: 600, realizedPl: 48 });
   });
 
+  it('apports nets cumulés : achats moins produit des ventes', () => {
+    const s = buildSnapshots([inst], ['2026-09-22', '2026-09-23', '2026-09-24']);
+    expect(s.map((x) => x.netContributions)).toEqual([1000, 1000, 1000 - 448]);
+    // gain hors apports = valeur - apports : 660 - 552 = 108 (dont 48 réalisés)
+    expect(s[2]!.marketValue - s[2]!.netContributions).toBe(108);
+  });
+
   it('reporte la dernière clôture connue (jour sans cotation)', () => {
     const s = buildSnapshots([inst], ['2026-09-26']);
     expect(s[0]!.marketValue).toBe(660);

@@ -8,7 +8,7 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000b', 'b@test.local');
 
 insert into public.instruments (id, yahoo_symbol, name, exchange) values
-  ('10000000-0000-0000-0000-000000000001', 'CW8.PA', 'Amundi MSCI World', 'PAR');
+  ('10000000-0000-0000-0000-000000000001', 'TAP1.PA', 'Amundi MSCI World', 'PAR');
 
 insert into public.quotes_latest (instrument_id, price, prev_close, quoted_at) values
   ('10000000-0000-0000-0000-000000000001', 100, 99, now());
@@ -86,7 +86,7 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select is((select count(*) from public.orders), 0::bigint, 'B ne voit aucun ordre de A');
 select is((select count(*) from public.alerts), 0::bigint, 'B ne voit aucune alerte de A');
 select is((select count(*) from public.settings), 0::bigint, 'B ne voit pas les réglages de A');
-select is((select count(*) from public.instruments), 1::bigint, 'les instruments sont partagés');
+select is((select count(*) from public.instruments where yahoo_symbol = 'TAP1.PA'), 1::bigint, 'les instruments sont partagés');
 
 select throws_ok(
   $$insert into public.orders (user_id, instrument_id, side, quantity, unit_price, executed_at)

@@ -4,6 +4,7 @@ import { isMarketOpen } from '@bourse/core';
 import { YahooProvider } from '@bourse/providers';
 import { evaluateAlerts } from './alerts';
 import { loadConfig } from './config';
+import { HistoryJob } from './history';
 import { logger as log } from './log';
 import { SourceMonitor } from './monitor';
 import { Notifier } from './notify';
@@ -19,6 +20,7 @@ const store = new SupabaseStore(db);
 const provider = new YahooProvider();
 const notifier = new Notifier({ resendApiKey: config.resendApiKey, emailFrom: config.emailFrom });
 const monitor = new SourceMonitor(config.staleAfterMs, new Date());
+const history = new HistoryJob({ store, provider, log });
 
 /** Message système (panne de la source de prix…) : envoyé à tous les canaux configurés. */
 async function notifyAll(message: Parameters<Notifier['sendDiscord']>[1]) {
@@ -51,6 +53,9 @@ async function cycle() {
       .check(new Date(), sourceOk, notifyAll)
       .catch((e) => log.error('supervision', { error: String(e) }));
     await evaluateAlerts(result.quotes, { store, notifier, log });
+    await history
+      .tick(new Date(), result.quotes)
+      .catch((e) => log.error('historique', { error: String(e) }));
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
     throw e;

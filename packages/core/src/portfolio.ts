@@ -13,6 +13,8 @@ export interface Snapshot {
   marketValue: number;
   costBasis: number;
   realizedPl: number;
+  /** Apports nets cumulés : achats (frais inclus) moins produit net des ventes. */
+  netContributions: number;
 }
 
 /**
@@ -32,16 +34,23 @@ export function buildSnapshots(
     ci: 0,
     pos: EMPTY_POSITION,
     lastClose: null as number | null,
+    flow: 0,
   }));
 
   return dates.map((date) => {
     let marketValue = 0;
     let costBasis = 0;
     let realizedPl = 0;
+    let netContributions = 0;
 
     for (const s of states) {
       while (s.oi < s.orders.length && parisDate(s.orders[s.oi]!.executedAt) <= date) {
-        s.pos = applyOrder(s.pos, s.orders[s.oi]!);
+        const o = s.orders[s.oi]!;
+        s.pos = applyOrder(s.pos, o);
+        s.flow +=
+          o.side === 'buy'
+            ? o.quantity * o.unitPrice + o.fees
+            : -(o.quantity * o.unitPrice - o.fees);
         s.oi++;
       }
       while (s.ci < s.closes.length && s.closes[s.ci]!.date <= date) {
@@ -51,7 +60,8 @@ export function buildSnapshots(
       marketValue += s.pos.quantity * (s.lastClose ?? s.pos.avgCost);
       costBasis += s.pos.costBasis;
       realizedPl += s.pos.realizedPl;
+      netContributions += s.flow;
     }
-    return { date, marketValue, costBasis, realizedPl };
+    return { date, marketValue, costBasis, realizedPl, netContributions };
   });
 }

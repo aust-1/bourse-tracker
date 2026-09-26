@@ -42,6 +42,14 @@ export interface Store {
   getPrevCloseFallback(instrumentId: string, beforeDate: string): Promise<number | null>;
   recordCycle(result: { error: string | null }): Promise<void>;
 
+  /** Plus ancienne et plus récente clôture stockées pour un instrument. */
+  getHistoryBounds(instrumentId: string): Promise<{ min: string | null; max: string | null }>;
+  /** Date (Paris) du plus ancien ordre sur cet instrument, tous utilisateurs confondus. */
+  getFirstOrderDate(instrumentId: string): Promise<string | null>;
+  upsertCloses(
+    rows: readonly { instrumentId: string; date: string; close: number }[],
+  ): Promise<void>;
+
   listActiveAlerts(): Promise<AlertRow[]>;
   /** Ordres d'un utilisateur sur un instrument (pour calculer le PRU). */
   getOrders(userId: string, instrumentId: string): Promise<Order[]>;

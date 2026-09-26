@@ -5,6 +5,7 @@ import type { Database } from '@bourse/db';
 import type { Quote } from '@bourse/providers';
 import { SERVICE_ROLE_KEY, SUPABASE_URL } from '../../../e2e/env';
 import { evaluateAlerts } from './alerts';
+import { HistoryJob } from './history';
 import { silentLogger } from './log';
 import { Notifier } from './notify';
 import { pollCycle } from './poll';
@@ -191,5 +192,30 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     // second cycle : rien ne repart
     await evaluateAlerts(fresh, { store, notifier, log: silentLogger, now });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('historique : remplissage par lots, bornes et premier ordre', async () => {
+    const store = new SupabaseStore(db);
+    await db.from('price_history').delete().eq('instrument_id', instrumentId);
+
+    // 2 500 séances fictives : dépasse la limite de 1 000 lignes par requête
+    const rows = Array.from({ length: 2500 }, (_, i) => {
+      const d = new Date(Date.UTC(2016, 0, 1) + i * 86_400_000);
+      return { date: d.toISOString().slice(0, 10), close: 100 + (i % 50) };
+    });
+    const provider = { getDailyCloses: vi.fn().mockResolvedValue(rows) };
+    const job = new HistoryJob({ store, provider, log: silentLogger });
+    await job.tick(new Date('2026-09-25T10:00:00Z'), []);
+
+    expect(provider.getDailyCloses).toHaveBeenCalledWith('CW8.PA', '1y');
+    const count = await db
+      .from('price_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('instrument_id', instrumentId);
+    expect(count.count).toBe(2500);
+
+    const bounds = await store.getHistoryBounds(instrumentId);
+    expect(bounds).toEqual({ min: '2016-01-01', max: rows[2499]!.date });
+    expect(await store.getFirstOrderDate(instrumentId)).toBe('2026-01-05');
   });
 });

@@ -10,13 +10,7 @@ export const CW8 = { yahoo_symbol: 'CW8.PA', name: 'Amundi MSCI World Swap', exc
 
 /** Base propre : un utilisateur de test, un instrument, aucune donnée perso. */
 export async function resetData() {
-  for (const t of [
-    'alert_events',
-    'alerts',
-    'orders',
-    'portfolio_snapshots',
-    'settings',
-  ] as const) {
+  for (const t of ['alert_events', 'alerts', 'orders', 'settings'] as const) {
     const col = t === 'alert_events' || t === 'alerts' || t === 'orders' ? 'id' : 'user_id';
     const { error } = await admin.from(t).delete().not(col, 'is', null);
     if (error) throw error;

@@ -1,4 +1,4 @@
-import type { Order } from '@bourse/core';
+import { parisDate, type Order } from '@bourse/core';
 import type { Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AlertRow, Store, StoredQuote, TrackedInstrument, UserSettings } from './store';
@@ -90,6 +90,55 @@ export class SupabaseStore implements Store {
       .update({ last_cycle_at: new Date().toISOString(), last_error: result.error })
       .eq('id', 1);
     if (error) throw new Error(`worker_status : ${error.message}`);
+  }
+
+  async getHistoryBounds(instrumentId: string) {
+    const [lo, hi] = await Promise.all([
+      this.db
+        .from('price_history')
+        .select('date')
+        .eq('instrument_id', instrumentId)
+        .order('date', { ascending: true })
+        .limit(1),
+      this.db
+        .from('price_history')
+        .select('date')
+        .eq('instrument_id', instrumentId)
+        .order('date', { ascending: false })
+        .limit(1),
+    ]);
+    return {
+      min: must(lo, "lecture de l'historique")[0]?.date ?? null,
+      max: must(hi, "lecture de l'historique")[0]?.date ?? null,
+    };
+  }
+
+  async getFirstOrderDate(instrumentId: string): Promise<string | null> {
+    const rows = must(
+      await this.db
+        .from('orders')
+        .select('executed_at')
+        .eq('instrument_id', instrumentId)
+        .order('executed_at', { ascending: true })
+        .limit(1),
+      'lecture du premier ordre',
+    );
+    return rows[0] ? parisDate(rows[0].executed_at) : null;
+  }
+
+  async upsertCloses(
+    rows: readonly { instrumentId: string; date: string; close: number }[],
+  ): Promise<void> {
+    // par lots : l'historique complet d'un ETF ancien dépasse 4 000 lignes
+    for (let i = 0; i < rows.length; i += 1000) {
+      const batch = rows.slice(i, i + 1000).map((r) => ({
+        instrument_id: r.instrumentId,
+        date: r.date,
+        close: r.close,
+      }));
+      const { error } = await this.db.from('price_history').upsert(batch);
+      if (error) throw new Error(`écriture de l'historique : ${error.message}`);
+    }
   }
 
   async listActiveAlerts(): Promise<AlertRow[]> {
