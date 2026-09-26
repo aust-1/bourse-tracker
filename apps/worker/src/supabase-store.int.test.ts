@@ -1,10 +1,12 @@
 // Test d'intégration : nécessite `supabase start` (lancer avec INTEGRATION=1)
 import { createClient } from '@supabase/supabase-js';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@bourse/db';
 import type { Quote } from '@bourse/providers';
 import { SERVICE_ROLE_KEY, SUPABASE_URL } from '../../../e2e/env';
+import { evaluateAlerts } from './alerts';
 import { silentLogger } from './log';
+import { Notifier } from './notify';
 import { pollCycle } from './poll';
 import { SupabaseStore } from './supabase-store';
 
@@ -91,5 +93,103 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     const { data } = await db.from('worker_status').select('*').eq('id', 1).single();
     expect(data?.last_error).toBe('test');
     expect(data?.last_cycle_at).not.toBeNull();
+  });
+
+  it("prise atomique d'une alerte : un seul cycle gagne, événement enregistré", async () => {
+    const store = new SupabaseStore(db);
+    const alert = await db
+      .from('alerts')
+      .insert({
+        user_id: userId,
+        instrument_id: instrumentId,
+        type: 'price_above',
+        threshold: 100,
+        channels: ['discord'],
+      })
+      .select('id')
+      .single();
+    const id = alert.data!.id;
+
+    expect((await store.listActiveAlerts()).map((a) => a.id)).toContain(id);
+    const [a, b] = await Promise.all([
+      store.claimAlert(id, new Date()),
+      store.claimAlert(id, new Date()),
+    ]);
+    expect([a, b].filter(Boolean)).toHaveLength(1);
+    expect((await store.listActiveAlerts()).map((x) => x.id)).not.toContain(id);
+
+    await store.recordAlertEvent({
+      alertId: id,
+      userId,
+      value: 101,
+      delivery: { discord: 'sent' },
+    });
+    const ev = await db.from('alert_events').select('*').eq('alert_id', id).single();
+    expect(ev.data).toMatchObject({ value_at_trigger: 101, delivery: { discord: 'sent' } });
+
+    await store.releaseAlert(id);
+    expect((await store.listActiveAlerts()).map((x) => x.id)).toContain(id);
+  });
+
+  it("lit les ordres d'un utilisateur", async () => {
+    const orders = await new SupabaseStore(db).getOrders(userId, instrumentId);
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ side: 'buy', quantity: 1, unitPrice: 100 });
+  });
+
+  it('pipeline complet : cote → alerte → Discord (simulé) → statut et historique en base', async () => {
+    const store = new SupabaseStore(db);
+    await db.from('alerts').delete().not('id', 'is', null);
+    await db.from('settings').delete().not('user_id', 'is', null);
+    await db.from('settings').insert({
+      user_id: userId,
+      discord_webhook_url: 'https://discord.com/api/webhooks/1/abc',
+    });
+    const alert = await db
+      .from('alerts')
+      .insert({
+        user_id: userId,
+        instrument_id: instrumentId,
+        type: 'position_pl_above',
+        threshold: 10,
+        channels: ['discord'],
+      })
+      .select('id')
+      .single();
+
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const notifier = new Notifier({ resendApiKey: null, emailFrom: 'x', fetch: fetchMock });
+    const fresh = [
+      {
+        instrument: { id: instrumentId, symbol: 'CW8.PA', name: 'World' },
+        price: 111, // PRU 100 -> +11 %
+        prevClose: 100,
+        quotedAt: new Date('2026-09-25T10:00:00Z'),
+      },
+    ];
+    const now = new Date('2026-09-25T10:00:00Z');
+    const r = await evaluateAlerts(fresh, { store, notifier, log: silentLogger, now });
+    expect(r.triggered).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe('https://discord.com/api/webhooks/1/abc');
+
+    const row = await db
+      .from('alerts')
+      .select('status, last_triggered_at')
+      .eq('id', alert.data!.id)
+      .single();
+    expect(row.data?.status).toBe('triggered');
+    expect(row.data?.last_triggered_at).not.toBeNull();
+    const ev = await db
+      .from('alert_events')
+      .select('delivery, value_at_trigger')
+      .eq('alert_id', alert.data!.id)
+      .single();
+    expect(ev.data?.delivery).toEqual({ discord: 'sent' });
+    expect(ev.data?.value_at_trigger).toBeCloseTo(11, 6);
+
+    // second cycle : rien ne repart
+    await evaluateAlerts(fresh, { store, notifier, log: silentLogger, now });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

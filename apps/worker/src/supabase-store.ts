@@ -1,6 +1,7 @@
+import type { Order } from '@bourse/core';
 import type { Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Store, StoredQuote, TrackedInstrument } from './store';
+import type { AlertRow, Store, StoredQuote, TrackedInstrument, UserSettings } from './store';
 
 export type Db = SupabaseClient<Database>;
 
@@ -89,5 +90,102 @@ export class SupabaseStore implements Store {
       .update({ last_cycle_at: new Date().toISOString(), last_error: result.error })
       .eq('id', 1);
     if (error) throw new Error(`worker_status : ${error.message}`);
+  }
+
+  async listActiveAlerts(): Promise<AlertRow[]> {
+    const rows = must(
+      await this.db
+        .from('alerts')
+        .select('id, user_id, instrument_id, type, threshold, channels')
+        .eq('status', 'active'),
+      'lecture des alertes actives',
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      instrumentId: r.instrument_id,
+      type: r.type,
+      threshold: r.threshold,
+      channels: r.channels,
+    }));
+  }
+
+  async getOrders(userId: string, instrumentId: string): Promise<Order[]> {
+    const rows = must(
+      await this.db
+        .from('orders')
+        .select('id, side, quantity, unit_price, fees, executed_at')
+        .eq('user_id', userId)
+        .eq('instrument_id', instrumentId),
+      'lecture des ordres',
+    );
+    return rows.map((o) => ({
+      id: o.id,
+      side: o.side,
+      quantity: o.quantity,
+      unitPrice: o.unit_price,
+      fees: o.fees,
+      executedAt: o.executed_at,
+    }));
+  }
+
+  async claimAlert(alertId: string, at: Date): Promise<boolean> {
+    // le filtre sur status = 'active' rend la prise atomique : un seul cycle gagne
+    const rows = must(
+      await this.db
+        .from('alerts')
+        .update({ status: 'triggered', last_triggered_at: at.toISOString() })
+        .eq('id', alertId)
+        .eq('status', 'active')
+        .select('id'),
+      "prise de l'alerte",
+    );
+    return rows.length === 1;
+  }
+
+  async releaseAlert(alertId: string): Promise<void> {
+    const { error } = await this.db.from('alerts').update({ status: 'active' }).eq('id', alertId);
+    if (error) throw new Error(`remise en active de l'alerte : ${error.message}`);
+  }
+
+  async recordAlertEvent(e: {
+    alertId: string;
+    userId: string;
+    value: number;
+    delivery: Record<string, string>;
+  }): Promise<void> {
+    const { error } = await this.db.from('alert_events').insert({
+      alert_id: e.alertId,
+      user_id: e.userId,
+      value_at_trigger: e.value,
+      delivery: e.delivery,
+    });
+    if (error) throw new Error(`historique d'alerte : ${error.message}`);
+  }
+
+  private toSettings(r: Database['public']['Tables']['settings']['Row']): UserSettings {
+    return {
+      userId: r.user_id,
+      discordWebhookUrl: r.discord_webhook_url,
+      email: r.email,
+      summaryEnabled: r.summary_enabled,
+      summaryTime: r.summary_time,
+      lastSummaryOn: r.last_summary_on,
+    };
+  }
+
+  async getSettings(userId: string): Promise<UserSettings | null> {
+    const { data, error } = await this.db
+      .from('settings')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw new Error(`lecture des réglages : ${error.message}`);
+    return data ? this.toSettings(data) : null;
+  }
+
+  async listSettings(): Promise<UserSettings[]> {
+    const rows = must(await this.db.from('settings').select('*'), 'lecture des réglages');
+    return rows.map((r) => this.toSettings(r));
   }
 }

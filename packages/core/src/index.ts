@@ -4,3 +4,4 @@ export * from './positions';
 export * from './valuation';
 export * from './alerts';
 export * from './portfolio';
+export * from './describe';

@@ -1,4 +1,5 @@
-import type { Store, StoredQuote, TrackedInstrument } from './store';
+import type { Order } from '@bourse/core';
+import type { AlertRow, Store, StoredQuote, TrackedInstrument, UserSettings } from './store';
 
 /** Implémentation en mémoire du Store, pour les tests. */
 export class MemoryStore implements Store {
@@ -28,5 +29,48 @@ export class MemoryStore implements Store {
 
   async recordCycle(result: { error: string | null }) {
     this.cycles.push(result);
+  }
+
+  alerts: (AlertRow & { status: 'active' | 'triggered' })[] = [];
+  orders: (Order & { userId: string; instrumentId: string })[] = [];
+  settings: UserSettings[] = [];
+  events: { alertId: string; userId: string; value: number; delivery: Record<string, string> }[] =
+    [];
+
+  async listActiveAlerts() {
+    return this.alerts.filter((a) => a.status === 'active');
+  }
+
+  async getOrders(userId: string, instrumentId: string) {
+    return this.orders.filter((o) => o.userId === userId && o.instrumentId === instrumentId);
+  }
+
+  async claimAlert(alertId: string) {
+    const a = this.alerts.find((x) => x.id === alertId);
+    if (!a || a.status !== 'active') return false;
+    a.status = 'triggered';
+    return true;
+  }
+
+  async releaseAlert(alertId: string) {
+    const a = this.alerts.find((x) => x.id === alertId);
+    if (a) a.status = 'active';
+  }
+
+  async recordAlertEvent(e: {
+    alertId: string;
+    userId: string;
+    value: number;
+    delivery: Record<string, string>;
+  }) {
+    this.events.push(e);
+  }
+
+  async getSettings(userId: string) {
+    return this.settings.find((s) => s.userId === userId) ?? null;
+  }
+
+  async listSettings() {
+    return this.settings;
   }
 }

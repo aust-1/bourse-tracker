@@ -2,8 +2,11 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@bourse/db';
 import { isMarketOpen } from '@bourse/core';
 import { YahooProvider } from '@bourse/providers';
+import { evaluateAlerts } from './alerts';
 import { loadConfig } from './config';
 import { logger as log } from './log';
+import { SourceMonitor } from './monitor';
+import { Notifier } from './notify';
 import { pollCycle } from './poll';
 import { startHeartbeat, startScheduler } from './scheduler';
 import { SupabaseStore } from './supabase-store';
@@ -14,6 +17,15 @@ const db = createClient<Database>(config.supabaseUrl, config.serviceRoleKey, {
 });
 const store = new SupabaseStore(db);
 const provider = new YahooProvider();
+const notifier = new Notifier({ resendApiKey: config.resendApiKey, emailFrom: config.emailFrom });
+const monitor = new SourceMonitor(config.staleAfterMs, new Date());
+
+/** Message système (panne de la source de prix…) : envoyé à tous les canaux configurés. */
+async function notifyAll(message: Parameters<Notifier['sendDiscord']>[1]) {
+  for (const s of await store.listSettings()) {
+    await notifier.notify(s, ['discord', 'email'], message);
+  }
+}
 
 async function cycle() {
   let error: string | null = null;
@@ -32,9 +44,13 @@ async function cycle() {
       marketOpen: isMarketOpen(new Date()),
       maxQuoteLagSeconds: lags.length ? Math.max(...lags) : null,
     });
-    if (result.failed.length > 0 && result.quotes.length === 0) {
-      error = `aucune cote obtenue (${result.failed.length} échecs)`;
-    }
+    const sourceOk = result.quotes.length > 0 || result.failed.length === 0;
+    if (!sourceOk) error = `aucune cote obtenue (${result.failed.length} échecs)`;
+
+    await monitor
+      .check(new Date(), sourceOk, notifyAll)
+      .catch((e) => log.error('supervision', { error: String(e) }));
+    await evaluateAlerts(result.quotes, { store, notifier, log });
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
     throw e;

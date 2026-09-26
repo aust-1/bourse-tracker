@@ -1,4 +1,4 @@
-import type { AlertType } from '@bourse/core';
+import type { AlertType, Order } from '@bourse/core';
 
 export interface TrackedInstrument {
   id: string;
@@ -23,11 +23,6 @@ export interface AlertRow {
   channels: string[];
 }
 
-export interface Position {
-  quantity: number;
-  avgCost: number;
-}
-
 export interface UserSettings {
   userId: string;
   discordWebhookUrl: string | null;
@@ -46,4 +41,20 @@ export interface Store {
   /** Dernière clôture journalière strictement avant `beforeDate` (YYYY-MM-DD). */
   getPrevCloseFallback(instrumentId: string, beforeDate: string): Promise<number | null>;
   recordCycle(result: { error: string | null }): Promise<void>;
+
+  listActiveAlerts(): Promise<AlertRow[]>;
+  /** Ordres d'un utilisateur sur un instrument (pour calculer le PRU). */
+  getOrders(userId: string, instrumentId: string): Promise<Order[]>;
+  /** Passe l'alerte de `active` à `triggered` ; false si une autre exécution l'a déjà prise. */
+  claimAlert(alertId: string, at: Date): Promise<boolean>;
+  /** Remet l'alerte en `active` (échec total d'envoi : on réessaiera au prochain cycle). */
+  releaseAlert(alertId: string): Promise<void>;
+  recordAlertEvent(e: {
+    alertId: string;
+    userId: string;
+    value: number;
+    delivery: Record<string, string>;
+  }): Promise<void>;
+  getSettings(userId: string): Promise<UserSettings | null>;
+  listSettings(): Promise<UserSettings[]>;
 }
