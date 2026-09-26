@@ -65,6 +65,8 @@ export interface Store {
   }): Promise<void>;
   getSettings(userId: string): Promise<UserSettings | null>;
   listSettings(): Promise<UserSettings[]>;
+  /** Réglages des administrateurs : destinataires des messages système (panne de la source…). */
+  listAdminSettings(): Promise<UserSettings[]>;
 
   listUserOrders(userId: string): Promise<(Order & { instrumentId: string })[]>;
   listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]>;

@@ -301,4 +301,23 @@ export class SupabaseStore implements Store {
     const rows = must(await this.db.from('settings').select('*'), 'lecture des réglages');
     return rows.map((r) => this.toSettings(r));
   }
+
+  async listAdminSettings(): Promise<UserSettings[]> {
+    const admins = must(
+      await this.db.from('profiles').select('user_id').eq('is_admin', true),
+      'lecture des administrateurs',
+    );
+    if (admins.length === 0) return [];
+    const rows = must(
+      await this.db
+        .from('settings')
+        .select('*')
+        .in(
+          'user_id',
+          admins.map((a) => a.user_id),
+        ),
+      'lecture des réglages',
+    );
+    return rows.map((r) => this.toSettings(r));
+  }
 }

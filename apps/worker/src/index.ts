@@ -17,9 +17,9 @@ const store = new SupabaseStore(db);
 const provider = new YahooProvider();
 const notifier = new Notifier({ resendApiKey: config.resendApiKey, emailFrom: config.emailFrom });
 
-/** Message système (panne de la source de prix…) : envoyé à tous les canaux configurés. */
+/** Message système (panne de la source de prix…) : envoyé aux administrateurs, sur tous leurs canaux. */
 async function notifyAll(message: Message) {
-  for (const s of await store.listSettings()) {
+  for (const s of await store.listAdminSettings()) {
     await notifier.notify(s, ['discord', 'email'], message);
   }
 }

@@ -101,6 +101,12 @@ export class MemoryStore implements Store {
     return this.settings;
   }
 
+  admins = new Set<string>();
+
+  async listAdminSettings() {
+    return this.settings.filter((s) => this.admins.has(s.userId));
+  }
+
   alertEvents: (AlertEventRow & { userId: string })[] = [];
   summariesSent: { userId: string; day: string }[] = [];
 

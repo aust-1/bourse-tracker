@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@bourse/db';
 import { Notifier, type Quote } from '@bourse/providers';
 import { SERVICE_ROLE_KEY, SUPABASE_URL } from '../../../e2e/env';
+import { ensureUser } from '../../../e2e/users';
 import { evaluateAlerts } from './alerts';
 import { HistoryJob } from './history';
 import { silentLogger } from './log';
@@ -25,16 +26,7 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     await db.from('price_history').delete().not('instrument_id', 'is', null);
     await db.from('instruments').delete().not('id', 'is', null);
 
-    const users = await db.auth.admin.listUsers();
-    userId =
-      users.data.users.find((u) => u.email === 'int@bourse.local')?.id ??
-      (
-        await db.auth.admin.createUser({
-          email: 'int@bourse.local',
-          password: 'int-password-123',
-          email_confirm: true,
-        })
-      ).data.user!.id;
+    userId = await ensureUser(db, 'int@bourse.local', 'int-password-123');
 
     const inst = await db
       .from('instruments')
@@ -257,6 +249,23 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     await store.markSummarySent(userId, '2026-09-25');
     expect((await store.getSettings(userId))?.lastSummaryOn).toBe('2026-09-25');
     expect((await store.listSettings()).map((s) => s.userId)).toContain(userId);
+  });
+
+  it('messages système : seuls les administrateurs les reçoivent', async () => {
+    const store = new SupabaseStore(db);
+    await db.from('settings').delete().not('user_id', 'is', null);
+    await db.from('settings').insert({ user_id: userId, email: 'int@example.com' });
+
+    const before = await db.from('profiles').select('is_admin').eq('user_id', userId).single();
+    try {
+      await db.from('profiles').update({ is_admin: false }).eq('user_id', userId);
+      expect(await store.listAdminSettings()).toEqual([]);
+
+      await db.from('profiles').update({ is_admin: true }).eq('user_id', userId);
+      expect((await store.listAdminSettings()).map((s) => s.userId)).toEqual([userId]);
+    } finally {
+      await db.from('profiles').update({ is_admin: before.data!.is_admin }).eq('user_id', userId);
+    }
   });
 
   it('pagination : plus de 1 000 ordres ne sont jamais tronqués', async () => {
