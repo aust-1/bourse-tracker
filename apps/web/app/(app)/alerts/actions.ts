@@ -6,10 +6,13 @@ import { redirect } from 'next/navigation';
 import { parseAlertForm } from '@/lib/alerts';
 import { ensureInstrument } from '@/lib/instruments';
 import { dbErrorMessage } from '@/lib/orders';
+import { snapshot, type FormValues } from '@/lib/form-state';
 import { createClient } from '@/lib/supabase/server';
 
 export interface AlertFormState {
   error?: string;
+  /** Valeurs soumises, réutilisées comme valeurs par défaut (cf. lib/form-state.ts) */
+  values?: FormValues;
 }
 
 export async function createAlert(
@@ -17,11 +20,11 @@ export async function createAlert(
   formData: FormData,
 ): Promise<AlertFormState> {
   const { data, error } = parseAlertForm(formData);
-  if (!data) return { error };
+  if (!data) return { error, values: snapshot(formData) };
 
   const supabase = await createClient();
   const inst = await ensureInstrument(supabase, data.symbol);
-  if (!inst.id) return { error: inst.error };
+  if (!inst.id) return { error: inst.error, values: snapshot(formData) };
 
   const res = await supabase.from('alerts').insert({
     instrument_id: inst.id,
@@ -29,7 +32,7 @@ export async function createAlert(
     threshold: data.threshold,
     channels: data.channels,
   });
-  if (res.error) return { error: dbErrorMessage(res.error) };
+  if (res.error) return { error: dbErrorMessage(res.error), values: snapshot(formData) };
 
   // la condition est-elle déjà vraie ? Elle partirait alors au prochain cycle en séance.
   const [quote, orders] = await Promise.all([

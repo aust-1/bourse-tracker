@@ -4,10 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { dbErrorMessage, parseOrderForm } from '@/lib/orders';
 import { ensureInstrument } from '@/lib/instruments';
+import { snapshot, type FormValues } from '@/lib/form-state';
 import { createClient } from '@/lib/supabase/server';
 
 export interface OrderFormState {
   error?: string;
+  /** Valeurs soumises, réutilisées comme valeurs par défaut (cf. lib/form-state.ts) */
+  values?: FormValues;
 }
 
 export async function saveOrder(
@@ -16,11 +19,11 @@ export async function saveOrder(
   formData: FormData,
 ): Promise<OrderFormState> {
   const { data, error } = parseOrderForm(formData);
-  if (!data) return { error };
+  if (!data) return { error, values: snapshot(formData) };
 
   const supabase = await createClient();
   const inst = await ensureInstrument(supabase, data.symbol);
-  if (!inst.id) return { error: inst.error };
+  if (!inst.id) return { error: inst.error, values: snapshot(formData) };
 
   const row = {
     instrument_id: inst.id,
@@ -34,7 +37,7 @@ export async function saveOrder(
   const res = id
     ? await supabase.from('orders').update(row).eq('id', id)
     : await supabase.from('orders').insert(row);
-  if (res.error) return { error: dbErrorMessage(res.error) };
+  if (res.error) return { error: dbErrorMessage(res.error), values: snapshot(formData) };
 
   revalidatePath('/orders');
   revalidatePath('/');

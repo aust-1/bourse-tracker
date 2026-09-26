@@ -7,6 +7,8 @@ export interface SchedulerOptions {
   cycle: () => Promise<void>;
   log: Logger;
   now?: () => Date;
+  /** Fenêtre pendant laquelle les cycles tournent (défaut : fenêtre de polling des cotes). */
+  isActive?: (at: Date) => boolean;
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -20,13 +22,14 @@ const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 export function startScheduler(opts: SchedulerOptions) {
   const now = opts.now ?? (() => new Date());
   const sleep = opts.sleep ?? defaultSleep;
+  const isActive = opts.isActive ?? isPollingWindow;
   let running = true;
 
   const done = (async () => {
     let first = true;
     while (running) {
       const started = Date.now();
-      if (first || isPollingWindow(now())) {
+      if (first || isActive(now())) {
         first = false;
         try {
           await opts.cycle();

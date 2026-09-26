@@ -1,5 +1,12 @@
 import type { Order } from '@bourse/core';
-import type { AlertRow, Store, StoredQuote, TrackedInstrument, UserSettings } from './store';
+import type {
+  AlertEventRow,
+  AlertRow,
+  Store,
+  StoredQuote,
+  TrackedInstrument,
+  UserSettings,
+} from './store';
 
 /** Implémentation en mémoire du Store, pour les tests. */
 export class MemoryStore implements Store {
@@ -92,5 +99,22 @@ export class MemoryStore implements Store {
 
   async listSettings() {
     return this.settings;
+  }
+
+  alertEvents: (AlertEventRow & { userId: string })[] = [];
+  summariesSent: { userId: string; day: string }[] = [];
+
+  async listUserOrders(userId: string) {
+    return this.orders.filter((o) => o.userId === userId);
+  }
+
+  async listAlertEventsSince(userId: string, since: Date) {
+    return this.alertEvents.filter((e) => e.userId === userId && e.triggeredAt >= since);
+  }
+
+  async markSummarySent(userId: string, day: string) {
+    this.summariesSent.push({ userId, day });
+    const s = this.settings.find((x) => x.userId === userId);
+    if (s) s.lastSummaryOn = day;
   }
 }

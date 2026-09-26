@@ -24,6 +24,9 @@ export function AlertForm({
   const [state, action, pending] = useActionState<AlertFormState, FormData>(createAlert, {});
   const [type, setType] = useState<AlertType>('price_above');
   const unit = alertTypeInfo(type).unit === 'eur' ? '€' : '%';
+  // après une erreur, on restitue les canaux cochés ; sinon tous cochés par défaut
+  const wants = (c: string) =>
+    state.values ? state.values.channels?.split(',').includes(c) : true;
   const nothingConfigured = !configured.discord && !configured.email;
 
   return (
@@ -51,17 +54,30 @@ export function AlertForm({
 
       <label className="flex flex-col gap-1 text-sm">
         Seuil ({unit})
-        <input name="magnitude" inputMode="decimal" required className="input" />
+        <input
+          name="magnitude"
+          inputMode="decimal"
+          defaultValue={state.values?.magnitude}
+          required
+          className="input"
+        />
       </label>
 
       <fieldset className="flex flex-col gap-2 text-sm">
         <legend className="mb-1">Me prévenir par</legend>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="channels" value="discord" defaultChecked /> Discord
+          <input
+            type="checkbox"
+            name="channels"
+            value="discord"
+            defaultChecked={wants('discord')}
+          />{' '}
+          Discord
           {!configured.discord && <span className="text-xs text-amber-600">(non configuré)</span>}
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="channels" value="email" defaultChecked /> Email
+          <input type="checkbox" name="channels" value="email" defaultChecked={wants('email')} />{' '}
+          Email
           {!configured.email && <span className="text-xs text-amber-600">(non configuré)</span>}
         </label>
         {nothingConfigured && (

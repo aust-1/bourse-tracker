@@ -20,6 +20,7 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
     saveOrder.bind(null, id),
     {},
   );
+  const v = state.values;
   return (
     <form action={action} className="card flex max-w-xl flex-col gap-4">
       <div className="flex flex-col gap-1 text-sm">
@@ -34,11 +35,21 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
       <fieldset className="flex gap-6 text-sm">
         <legend className="mb-1">Sens</legend>
         <label className="flex items-center gap-2">
-          <input type="radio" name="side" value="buy" defaultChecked={values.side === 'buy'} />{' '}
+          <input
+            type="radio"
+            name="side"
+            value="buy"
+            defaultChecked={(v?.side ?? values.side) === 'buy'}
+          />{' '}
           Achat
         </label>
         <label className="flex items-center gap-2">
-          <input type="radio" name="side" value="sell" defaultChecked={values.side === 'sell'} />{' '}
+          <input
+            type="radio"
+            name="side"
+            value="sell"
+            defaultChecked={(v?.side ?? values.side) === 'sell'}
+          />{' '}
           Vente
         </label>
       </fieldset>
@@ -49,7 +60,7 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
           <input
             name="quantity"
             inputMode="decimal"
-            defaultValue={values.quantity}
+            defaultValue={v?.quantity ?? values.quantity}
             required
             className="input"
           />
@@ -59,14 +70,19 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
           <input
             name="unitPrice"
             inputMode="decimal"
-            defaultValue={values.unitPrice}
+            defaultValue={v?.unitPrice ?? values.unitPrice}
             required
             className="input"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Frais (€)
-          <input name="fees" inputMode="decimal" defaultValue={values.fees} className="input" />
+          <input
+            name="fees"
+            inputMode="decimal"
+            defaultValue={v?.fees ?? values.fees}
+            className="input"
+          />
         </label>
       </div>
 
@@ -75,7 +91,7 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
         <input
           type="datetime-local"
           name="executedAt"
-          defaultValue={values.executedAt}
+          defaultValue={v?.executedAt ?? values.executedAt}
           required
           className="input"
         />
@@ -83,7 +99,7 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
 
       <label className="flex flex-col gap-1 text-sm">
         Note (optionnel)
-        <input name="note" defaultValue={values.note} className="input" />
+        <input name="note" defaultValue={v?.note ?? values.note} className="input" />
       </label>
 
       {state.error && (

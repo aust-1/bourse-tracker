@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isMarketOpen,
   isPollingWindow,
+  isWorkWindow,
   parisDate,
   parisDayStart,
   parisLocalToDate,
@@ -30,6 +31,14 @@ describe('market', () => {
     expect(isPollingWindow(new Date('2026-09-25T06:54:00Z'))).toBe(false);
     expect(isPollingWindow(new Date('2026-09-25T15:40:00Z'))).toBe(true);
     expect(isPollingWindow(new Date('2026-09-25T15:41:00Z'))).toBe(false);
+  });
+
+  it('fenêtre de travail du worker : 08:55-23:00 en semaine', () => {
+    expect(isWorkWindow(new Date('2026-09-25T06:55:00Z'))).toBe(true);
+    expect(isWorkWindow(new Date('2026-09-25T17:00:00Z'))).toBe(true); // 19:00 Paris
+    expect(isWorkWindow(new Date('2026-09-25T21:00:00Z'))).toBe(false); // 23:00 Paris
+    expect(isWorkWindow(new Date('2026-09-25T06:54:00Z'))).toBe(false);
+    expect(isWorkWindow(new Date('2026-09-26T10:00:00Z'))).toBe(false); // samedi
   });
 
   it('début de journée parisienne, été et hiver', () => {

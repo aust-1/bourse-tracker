@@ -82,6 +82,15 @@ export function isPollingWindow(at: Date): boolean {
   return isWeekday(at) && m >= OPEN - 5 && m <= CLOSE + 10;
 }
 
+/**
+ * Fenêtre de travail du worker : lun-ven 08:55-23:00 Paris. Les cotes ne sont récupérées
+ * que dans la fenêtre de polling ; le reste sert au résumé du soir et à l'historique.
+ */
+export function isWorkWindow(at: Date): boolean {
+  const m = parisMinutes(at);
+  return isWeekday(at) && m >= OPEN - 5 && m < 23 * 60;
+}
+
 /** Convertit une saisie `YYYY-MM-DDTHH:mm` (heure de Paris) en instant UTC. */
 export function parisLocalToDate(local: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);

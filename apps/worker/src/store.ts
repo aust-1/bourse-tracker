@@ -65,4 +65,17 @@ export interface Store {
   }): Promise<void>;
   getSettings(userId: string): Promise<UserSettings | null>;
   listSettings(): Promise<UserSettings[]>;
+
+  listUserOrders(userId: string): Promise<(Order & { instrumentId: string })[]>;
+  listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]>;
+  /** Consigne l'envoi du résumé du jour (`day` = YYYY-MM-DD, Paris). */
+  markSummarySent(userId: string, day: string): Promise<void>;
+}
+
+export interface AlertEventRow {
+  type: AlertType;
+  threshold: number;
+  instrumentName: string;
+  value: number;
+  triggeredAt: Date;
 }

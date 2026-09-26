@@ -1,7 +1,14 @@
 import { parisDate, type Order } from '@bourse/core';
 import type { Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AlertRow, Store, StoredQuote, TrackedInstrument, UserSettings } from './store';
+import type {
+  AlertEventRow,
+  AlertRow,
+  Store,
+  StoredQuote,
+  TrackedInstrument,
+  UserSettings,
+} from './store';
 
 export type Db = SupabaseClient<Database>;
 
@@ -231,6 +238,58 @@ export class SupabaseStore implements Store {
       .maybeSingle();
     if (error) throw new Error(`lecture des réglages : ${error.message}`);
     return data ? this.toSettings(data) : null;
+  }
+
+  async listUserOrders(userId: string) {
+    const rows = must(
+      await this.db
+        .from('orders')
+        .select('id, instrument_id, side, quantity, unit_price, fees, executed_at')
+        .eq('user_id', userId),
+      'lecture des ordres',
+    );
+    return rows.map((o) => ({
+      id: o.id,
+      instrumentId: o.instrument_id,
+      side: o.side,
+      quantity: o.quantity,
+      unitPrice: o.unit_price,
+      fees: o.fees,
+      executedAt: o.executed_at,
+    }));
+  }
+
+  async listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]> {
+    const rows = must(
+      await this.db
+        .from('alert_events')
+        .select('value_at_trigger, triggered_at, alerts(type, threshold, instruments(name))')
+        .eq('user_id', userId)
+        .gte('triggered_at', since.toISOString())
+        .order('triggered_at'),
+      "lecture de l'historique d'alertes",
+    );
+    return rows.flatMap((r) =>
+      r.alerts
+        ? [
+            {
+              type: r.alerts.type,
+              threshold: r.alerts.threshold,
+              instrumentName: r.alerts.instruments?.name ?? '?',
+              value: r.value_at_trigger,
+              triggeredAt: new Date(r.triggered_at),
+            },
+          ]
+        : [],
+    );
+  }
+
+  async markSummarySent(userId: string, day: string): Promise<void> {
+    const { error } = await this.db
+      .from('settings')
+      .update({ last_summary_on: day })
+      .eq('user_id', userId);
+    if (error) throw new Error(`consignation du résumé : ${error.message}`);
   }
 
   async listSettings(): Promise<UserSettings[]> {

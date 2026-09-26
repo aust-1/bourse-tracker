@@ -54,6 +54,9 @@ test("cycle de vie d'un ordre : ajout, vente à découvert refusée, modificatio
   // vente supérieure à la quantité détenue : refusée par la base
   await fillOrder(page, { side: 'Vente', qty: '11', price: '110', when: '2026-01-06T10:00' });
   await expect(page.locator('p[role="alert"]')).toContainText('négative');
+  // la saisie n'est pas perdue après une erreur (React 19 réinitialise les champs par défaut)
+  await expect(page.getByLabel('Quantité')).toHaveValue('11');
+  await expect(page.getByLabel('Prix unitaire (€)')).toHaveValue('110');
 
   // vente valide
   await fillOrder(page, { side: 'Vente', qty: '4', price: '110', when: '2026-01-06T10:00' });

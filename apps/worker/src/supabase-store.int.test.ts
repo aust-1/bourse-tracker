@@ -217,4 +217,45 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     expect(bounds).toEqual({ min: '2016-01-01', max: rows[2499]!.date });
     expect(await store.getFirstOrderDate(instrumentId)).toBe('2026-01-05');
   });
+
+  it("résumé : ordres de l'utilisateur, événements du jour et consignation", async () => {
+    const store = new SupabaseStore(db);
+    await db.from('settings').delete().not('user_id', 'is', null);
+    await db.from('settings').insert({ user_id: userId, email: 'int@example.com' });
+    await db.from('alerts').delete().not('id', 'is', null);
+    const alert = await db
+      .from('alerts')
+      .insert({ user_id: userId, instrument_id: instrumentId, type: 'price_above', threshold: 50 })
+      .select('id')
+      .single();
+    await db.from('alert_events').insert([
+      {
+        alert_id: alert.data!.id,
+        user_id: userId,
+        value_at_trigger: 60,
+        triggered_at: '2026-09-25T09:00:00Z',
+      },
+      {
+        alert_id: alert.data!.id,
+        user_id: userId,
+        value_at_trigger: 61,
+        triggered_at: '2026-09-20T09:00:00Z',
+      },
+    ]);
+
+    expect((await store.listUserOrders(userId)).map((o) => o.instrumentId)).toEqual([instrumentId]);
+
+    const events = await store.listAlertEventsSince(userId, new Date('2026-09-24T22:00:00Z'));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: 'price_above',
+      threshold: 50,
+      value: 60,
+      instrumentName: 'World',
+    });
+
+    await store.markSummarySent(userId, '2026-09-25');
+    expect((await store.getSettings(userId))?.lastSummaryOn).toBe('2026-09-25');
+    expect((await store.listSettings()).map((s) => s.userId)).toContain(userId);
+  });
 });
