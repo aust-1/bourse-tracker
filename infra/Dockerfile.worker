@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1
+# Image du worker : un seul fichier JavaScript (esbuild embarque les dépendances).
+FROM node:22-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+WORKDIR /repo
+
+FROM base AS build
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/web/package.json apps/web/
+COPY apps/worker/package.json apps/worker/
+COPY packages/core/package.json packages/core/
+COPY packages/db/package.json packages/db/
+COPY packages/providers/package.json packages/providers/
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm --filter @bourse/worker build
+
+FROM node:22-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production
+ENV TZ=Europe/Paris
+COPY --from=build /repo/apps/worker/dist/index.js ./index.js
+USER node
+CMD ["node", "index.js"]

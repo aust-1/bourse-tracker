@@ -1,0 +1,20 @@
+name: Smoke test Yahoo (nuit)
+# Détecte une casse de l'API Yahoo (format, blocage) avant qu'elle ne touche le worker.
+# En cas d'échec, GitHub t'envoie un email : le plan B est décrit dans docs/DEPLOY.md.
+on:
+  schedule:
+    - cron: '30 4 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  yahoo-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @bourse/providers test:live
