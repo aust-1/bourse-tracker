@@ -1,4 +1,9 @@
 # Déploiement sur le VPS : `docker compose up -d --build` (le fichier .env est lu automatiquement).
+#
+# Le VPS héberge déjà un reverse proxy Traefik (ports 80/443) : ce fichier ne publie aucun port,
+# il déclare le site auprès de Traefik par des labels, sur son réseau Docker partagé.
+# Les noms ci-dessous (réseau, entrypoint, résolveur de certificats) sont ceux du VPS ;
+# ils se changent dans .env (TRAEFIK_NETWORK, TRAEFIK_ENTRYPOINT, TRAEFIK_CERTRESOLVER).
 x-logging: &logging
   driver: json-file
   options:
@@ -6,22 +11,6 @@ x-logging: &logging
     max-file: '3'
 
 services:
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-    environment:
-      DOMAIN: ${DOMAIN:?DOMAIN manquant dans .env}
-    volumes:
-      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - web
-    logging: *logging
-
   web:
     build:
       context: .
@@ -30,11 +19,32 @@ services:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?manquant dans .env}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?manquant dans .env}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+    networks:
+      - default
+      - traefik
+    labels:
+      - traefik.enable=true
+      # le conteneur est sur deux réseaux : Traefik doit savoir lequel utiliser
+      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik-network}
+      - traefik.http.routers.bourse.rule=Host(`${DOMAIN:?DOMAIN manquant dans .env}`)
+      - traefik.http.routers.bourse.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.bourse.tls.certresolver=${TRAEFIK_CERTRESOLVER:-myresolver}
+      - traefik.http.routers.bourse.middlewares=bourse-compress,bourse-headers
+      - traefik.http.services.bourse.loadbalancer.server.port=3000
+      - traefik.http.middlewares.bourse-compress.compress=true
+      - traefik.http.middlewares.bourse-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.bourse-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.bourse-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.bourse-headers.headers.frameDeny=true
+      - traefik.http.middlewares.bourse-headers.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.bourse-headers.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
     logging: *logging
 
   worker:
@@ -42,6 +52,8 @@ services:
       context: .
       dockerfile: infra/Dockerfile.worker
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?manquant dans .env}
@@ -52,6 +64,8 @@ services:
       STALE_AFTER_MS: ${STALE_AFTER_MS:-300000}
     logging: *logging
 
-volumes:
-  caddy_data:
-  caddy_config:
+networks:
+  # réseau du Traefik existant (créé par son propre docker-compose)
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik-network}

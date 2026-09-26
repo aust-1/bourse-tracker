@@ -32,7 +32,13 @@ Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte : c'est suffi
 ## 3. VPS
 
 1. Serveur Debian/Ubuntu (Hetzner CX22, ~4 €/mois), un **nom de domaine ou sous-domaine** dont l'enregistrement DNS `A` pointe vers l'IP du serveur.
-2. Installer Docker : `curl -fsSL https://get.docker.com | sh`
+2. Docker installé (`curl -fsSL https://get.docker.com | sh`) **et un Traefik déjà en service** : c'est lui qui écoute
+   sur les ports 80 et 443. Ce projet n'ouvre aucun port : il déclare le site à Traefik par des labels
+   (`docker-compose.yml`) sur le réseau Docker partagé. Le Traefik doit avoir le provider Docker activé avec
+   `exposedByDefault=false` (labels `traefik.enable=true` explicites), un entrypoint `websecure` et un résolveur
+   de certificats `myresolver`, sur le réseau externe `traefik-network`. Ce sont les noms de ton VPS actuel ;
+   s'ils diffèrent, ajuste `TRAEFIK_NETWORK`, `TRAEFIK_ENTRYPOINT` et `TRAEFIK_CERTRESOLVER` dans `.env`.
+   Vérifier : `docker network ls | grep traefik`.
 3. Récupérer le code et configurer :
 
    ```bash
@@ -41,10 +47,16 @@ Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte : c'est suffi
    docker compose up -d --build
    ```
 
-4. Ouvrir `https://<ton-domaine>` : la page de connexion doit s'afficher (certificat HTTPS automatique).
+4. Ouvrir `https://<ton-domaine>` : la page de connexion doit s'afficher (le certificat est émis par Traefik,
+   la première fois cela peut prendre quelques secondes).
 5. Se connecter, puis **Réglages** : coller le webhook Discord, l'email, et cliquer sur **Envoyer un test**.
 
 Pare-feu conseillé : n'ouvrir que les ports 22, 80 et 443 (`ufw allow 22,80,443/tcp && ufw enable`).
+Attention : les ports publiés par Docker contournent `ufw`. Ce projet n'en publie aucun, ce qui est voulu.
+
+Principe des labels : le routeur `bourse` envoie `Host(<DOMAIN>)` vers le port 3000 du conteneur `web`, avec
+compression et en-têtes de sécurité (HSTS, `X-Frame-Options`, etc.). Ce routage a été testé contre un vrai
+Traefik : routeur chargé, service en état `UP`, réponse 200 sur le bon domaine et 404 sur un autre.
 
 ## 4. Sauvegardes
 
@@ -98,4 +110,4 @@ et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 
 **Le worker ne « ping » plus** : Healthchecks.io t'envoie un email. `docker compose ps`, puis `docker compose restart worker`.
 
-**Le site ne répond plus** : `docker compose logs web caddy`, puis `./infra/deploy.sh`.
+**Le site ne répond plus** : `docker compose logs web`, puis `docker logs <conteneur-traefik>` (routeur non chargé ? mauvais nom de réseau ?), puis `./infra/deploy.sh`.
