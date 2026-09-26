@@ -62,7 +62,7 @@ Le plan gratuit Supabase n'a pas de restauration à un instant donné : cette sa
 **Restaurer** dans un projet dont le schéma existe (`supabase db push`) :
 
 ```bash
-SUPABASE_DB_URL=postgresql://… ./infra/restore.sh /var/backups/bourse-tracker/bourse-AAAA-MM-JJ-HHMM.sql.gz
+SUPABASE_DB_HOST=… SUPABASE_DB_PASSWORD=… ./infra/restore.sh /var/backups/bourse-tracker/bourse-AAAA-MM-JJ-HHMM.sql.gz
 ```
 
 La procédure a été testée : sauvegarde, remise à zéro complète de la base, restauration, puis
@@ -71,8 +71,10 @@ vérification des ordres, alertes, comptes et instruments.
 ## 5. Déploiement automatique (optionnel)
 
 Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
-`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé privée dédiée, dont la clé publique est dans `~/.ssh/authorized_keys` du VPS)
-et `VPS_PATH` (`/opt/bourse-tracker`). À chaque `push` sur `main` dont la CI est verte, le VPS exécute `infra/deploy.sh`.
+`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé privée dédiée, dont la clé publique est dans `~/.ssh/authorized_keys` du VPS),
+`VPS_PATH` (`/opt/bourse-tracker`) et `VPS_KNOWN_HOSTS`. Ce dernier est la clé d'hôte du serveur, à récupérer
+une seule fois depuis un réseau de confiance : `ssh-keyscan -t ed25519 <ip-du-vps>`. Elle est épinglée dans le workflow
+(`StrictHostKeyChecking=yes`), de sorte qu'un intercepteur ne puisse pas se faire passer pour ton serveur. À chaque `push` sur `main` dont la CI est verte, le VPS exécute `infra/deploy.sh`.
 
 ## 6. Première séance : mesurer le retard de Yahoo
 

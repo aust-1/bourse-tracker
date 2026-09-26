@@ -258,4 +258,34 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     expect((await store.getSettings(userId))?.lastSummaryOn).toBe('2026-09-25');
     expect((await store.listSettings()).map((s) => s.userId)).toContain(userId);
   });
+
+  it('pagination : plus de 1 000 ordres ne sont jamais tronqués', async () => {
+    const store = new SupabaseStore(db);
+    await db.from('orders').delete().not('id', 'is', null);
+    const extra = await db
+      .from('instruments')
+      .insert([
+        { yahoo_symbol: 'PAG1.PA', name: 'Pag 1', exchange: 'PAR' },
+        { yahoo_symbol: 'PAG2.PA', name: 'Pag 2', exchange: 'PAR' },
+      ])
+      .select('id');
+    const ids = [instrumentId, ...extra.data!.map((i) => i.id)];
+
+    // 1 200 achats répartis sur 3 instruments : la limite de PostgREST est de 1 000 lignes
+    const rows = Array.from({ length: 1200 }, (_, i) => ({
+      user_id: userId,
+      instrument_id: ids[i % 3]!,
+      side: 'buy' as const,
+      quantity: 1,
+      unit_price: 100,
+      executed_at: new Date(Date.UTC(2025, 0, 1) + i * 3_600_000).toISOString(),
+    }));
+    const ins = await db.from('orders').insert(rows);
+    expect(ins.error).toBeNull();
+
+    expect(await store.listUserOrders(userId)).toHaveLength(1200);
+    expect(await store.getOrders(userId, instrumentId)).toHaveLength(400);
+    const tracked = await store.listTrackedInstruments();
+    expect(tracked.map((t) => t.symbol).sort()).toEqual(['CW8.PA', 'PAG1.PA', 'PAG2.PA']);
+  });
 });

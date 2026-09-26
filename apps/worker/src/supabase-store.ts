@@ -1,5 +1,5 @@
 import { parisDate, type Order } from '@bourse/core';
-import type { Database } from '@bourse/db';
+import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AlertEventRow,
@@ -25,11 +25,14 @@ export class SupabaseStore implements Store {
 
   async listTrackedInstruments(): Promise<TrackedInstrument[]> {
     const [orders, alerts] = await Promise.all([
-      this.db.from('orders').select('instrument_id'),
+      // paginé : au-delà de 1 000 ordres, une lecture simple ignorerait des instruments
+      fetchAll((from, to) =>
+        this.db.from('orders').select('instrument_id').order('id').range(from, to),
+      ),
       this.db.from('alerts').select('instrument_id').eq('status', 'active'),
     ]);
     const ids = new Set([
-      ...must(orders, 'lecture des ordres').map((o) => o.instrument_id),
+      ...orders.map((o) => o.instrument_id),
       ...must(alerts, 'lecture des alertes').map((a) => a.instrument_id),
     ]);
     if (ids.size === 0) return [];
@@ -167,13 +170,14 @@ export class SupabaseStore implements Store {
   }
 
   async getOrders(userId: string, instrumentId: string): Promise<Order[]> {
-    const rows = must(
-      await this.db
+    const rows = await fetchAll((from, to) =>
+      this.db
         .from('orders')
         .select('id, side, quantity, unit_price, fees, executed_at')
         .eq('user_id', userId)
-        .eq('instrument_id', instrumentId),
-      'lecture des ordres',
+        .eq('instrument_id', instrumentId)
+        .order('id')
+        .range(from, to),
     );
     return rows.map((o) => ({
       id: o.id,
@@ -241,12 +245,13 @@ export class SupabaseStore implements Store {
   }
 
   async listUserOrders(userId: string) {
-    const rows = must(
-      await this.db
+    const rows = await fetchAll((from, to) =>
+      this.db
         .from('orders')
         .select('id, instrument_id, side, quantity, unit_price, fees, executed_at')
-        .eq('user_id', userId),
-      'lecture des ordres',
+        .eq('user_id', userId)
+        .order('id')
+        .range(from, to),
     );
     return rows.map((o) => ({
       id: o.id,

@@ -1,4 +1,5 @@
 import { computePosition, valuePosition } from '@bourse/core';
+import { fetchAll } from '@bourse/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { InstrumentChart } from '@/components/instrument-chart';
@@ -18,17 +19,21 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
       .select('id, yahoo_symbol, name, exchange')
       .eq('id', id)
       .maybeSingle(),
-    supabase
-      .from('orders')
-      .select('id, side, quantity, unit_price, fees, executed_at')
-      .eq('instrument_id', id)
-      .order('executed_at', { ascending: false }),
+    fetchAll((from, to) =>
+      supabase
+        .from('orders')
+        .select('id, side, quantity, unit_price, fees, executed_at')
+        .eq('instrument_id', id)
+        .order('executed_at', { ascending: false })
+        .order('id')
+        .range(from, to),
+    ),
     supabase.from('quotes_latest').select('*').eq('instrument_id', id).maybeSingle(),
   ]);
   if (!inst.data) notFound();
 
   const pos = computePosition(
-    (orders.data ?? []).map((o) => ({
+    orders.map((o) => ({
       id: o.id,
       side: o.side,
       quantity: o.quantity,
@@ -97,9 +102,9 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
             Nouvel ordre
           </Link>
         </div>
-        {orders.data?.length ? (
+        {orders.length ? (
           <ul className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
-            {orders.data.map((o) => (
+            {orders.map((o) => (
               <li key={o.id} className="flex justify-between gap-3 py-1.5">
                 <span>
                   {dateTime(o.executed_at)} · {o.side === 'buy' ? 'Achat' : 'Vente'}{' '}

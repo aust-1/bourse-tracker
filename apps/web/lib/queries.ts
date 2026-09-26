@@ -1,4 +1,4 @@
-import type { Database } from '@bourse/db';
+import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { InstrumentRow, OrderRow, QuoteRow } from '@bourse/core';
 
@@ -32,18 +32,21 @@ export async function loadQuotes(supabase: Client): Promise<QuoteRow[]> {
 
 export async function loadPortfolioData(supabase: Client): Promise<PortfolioData> {
   const [orders, instruments, quotes] = await Promise.all([
-    supabase
-      .from('orders')
-      .select('id, instrument_id, side, quantity, unit_price, fees, executed_at')
-      .order('executed_at'),
+    fetchAll((from, to) =>
+      supabase
+        .from('orders')
+        .select('id, instrument_id, side, quantity, unit_price, fees, executed_at')
+        .order('executed_at')
+        .order('id')
+        .range(from, to),
+    ),
     supabase.from('instruments').select('id, yahoo_symbol, name'),
     loadQuotes(supabase),
   ]);
-  if (orders.error) throw new Error(orders.error.message);
   if (instruments.error) throw new Error(instruments.error.message);
 
   return {
-    orders: orders.data.map((o) => ({
+    orders: orders.map((o) => ({
       id: o.id,
       instrumentId: o.instrument_id,
       side: o.side,

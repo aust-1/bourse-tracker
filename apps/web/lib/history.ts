@@ -1,5 +1,5 @@
 import { buildSnapshots, parisDate, type Snapshot } from '@bourse/core';
-import type { Database } from '@bourse/db';
+import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OrderRow, QuoteRow } from '@bourse/core';
 
@@ -127,22 +127,6 @@ export function periodStats(
 }
 
 type Client = SupabaseClient<Database>;
-
-/** Lit toutes les lignes d'une requête paginée (PostgREST plafonne à 1000 lignes par appel). */
-async function fetchAll<T>(
-  page: (
-    from: number,
-    to: number,
-  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
-): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await page(from, from + 999);
-    if (error) throw new Error(error.message);
-    out.push(...(data ?? []));
-    if (!data || data.length < 1000) return out;
-  }
-}
 
 export async function loadCloses(
   supabase: Client,

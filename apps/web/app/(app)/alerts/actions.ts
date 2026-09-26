@@ -1,6 +1,7 @@
 'use server';
 
 import { computePosition, evaluateAlert } from '@bourse/core';
+import { fetchAll } from '@bourse/db';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseAlertForm } from '@/lib/alerts';
@@ -25,6 +26,7 @@ export async function createAlert(
   const supabase = await createClient();
   const inst = await ensureInstrument(supabase, data.symbol);
   if (!inst.id) return { error: inst.error, values: snapshot(formData) };
+  const instrumentId = inst.id; // capturé : le rétrécissement de type ne traverse pas les callbacks
 
   const res = await supabase.from('alerts').insert({
     instrument_id: inst.id,
@@ -41,17 +43,21 @@ export async function createAlert(
       .select('price, prev_close')
       .eq('instrument_id', inst.id)
       .maybeSingle(),
-    supabase
-      .from('orders')
-      .select('id, side, quantity, unit_price, fees, executed_at')
-      .eq('instrument_id', inst.id),
+    fetchAll((from, to) =>
+      supabase
+        .from('orders')
+        .select('id, side, quantity, unit_price, fees, executed_at')
+        .eq('instrument_id', instrumentId)
+        .order('id')
+        .range(from, to),
+    ),
   ]);
   let alreadyTrue = false;
   if (quote.data) {
     let avgCost: number | null;
     try {
       const pos = computePosition(
-        (orders.data ?? []).map((o) => ({
+        orders.map((o) => ({
           id: o.id,
           side: o.side,
           quantity: o.quantity,

@@ -1,14 +1,26 @@
+import { fetchAll } from '@bourse/db';
 import { NextResponse } from 'next/server';
 import { ordersToCsv } from '@/lib/orders';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('orders')
-    .select('side, quantity, unit_price, fees, executed_at, note, instruments(yahoo_symbol, name)')
-    .order('executed_at', { ascending: true });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  let data;
+  try {
+    // export complet : au-delà de 1 000 ordres, une lecture simple serait tronquée sans erreur
+    data = await fetchAll((from, to) =>
+      supabase
+        .from('orders')
+        .select(
+          'side, quantity, unit_price, fees, executed_at, note, instruments(yahoo_symbol, name)',
+        )
+        .order('executed_at', { ascending: true })
+        .order('id')
+        .range(from, to),
+    );
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'erreur' }, { status: 500 });
+  }
 
   const csv = ordersToCsv(
     data.map((o) => ({

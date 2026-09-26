@@ -1,3 +1,4 @@
+import { fetchAll } from '@bourse/db';
 import Link from 'next/link';
 import { dateTime, eur, num } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
@@ -8,17 +9,27 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
   const { instrument, side } = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase
-    .from('orders')
-    .select(
-      'id, side, quantity, unit_price, fees, executed_at, note, instruments(id, yahoo_symbol, name)',
-    )
-    .order('executed_at', { ascending: false });
-  if (instrument) query = query.eq('instrument_id', instrument);
-  if (side === 'buy' || side === 'sell') query = query.eq('side', side);
+  // une requête neuve par page : un même constructeur ne doit pas être réutilisé avec .range()
+  const page = (from: number, to: number) => {
+    let query = supabase
+      .from('orders')
+      .select(
+        'id, side, quantity, unit_price, fees, executed_at, note, instruments(id, yahoo_symbol, name)',
+      )
+      .order('executed_at', { ascending: false })
+      .order('id');
+    if (instrument) query = query.eq('instrument_id', instrument);
+    if (side === 'buy' || side === 'sell') query = query.eq('side', side);
+    return query.range(from, to);
+  };
 
-  const [{ data: orders, error }, { data: instruments }] = await Promise.all([
-    query,
+  // objet plutôt que variable : TypeScript ne voit pas les affectations faites dans un callback
+  const load = { error: null as string | null };
+  const [orders, { data: instruments }] = await Promise.all([
+    fetchAll(page).catch((e: Error) => {
+      load.error = e.message;
+      return [];
+    }),
     supabase.from('instruments').select('id, yahoo_symbol, name').order('name'),
   ]);
 
@@ -53,7 +64,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
         <button className="btn-secondary">Filtrer</button>
       </form>
 
-      {error && <p className="text-sm text-red-600">Erreur de chargement : {error.message}</p>}
+      {load.error && <p className="text-sm text-red-600">Erreur de chargement : {load.error}</p>}
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full">
