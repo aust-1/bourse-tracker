@@ -137,6 +137,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      invitations: {
+        Row: {
+          code: string;
+          created_at: string;
+          created_by: string;
+          expires_at: string;
+          id: string;
+          note: string | null;
+          used_at: string | null;
+          used_by: string | null;
+          used_email: string | null;
+        };
+        Insert: {
+          code?: string;
+          created_at?: string;
+          created_by?: string;
+          expires_at?: string;
+          id?: string;
+          note?: string | null;
+          used_at?: string | null;
+          used_by?: string | null;
+          used_email?: string | null;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          created_by?: string;
+          expires_at?: string;
+          id?: string;
+          note?: string | null;
+          used_at?: string | null;
+          used_by?: string | null;
+          used_email?: string | null;
+        };
+        Relationships: [];
+      };
       orders: {
         Row: {
           created_at: string;
@@ -210,6 +246,27 @@ export type Database = {
           },
         ];
       };
+      profiles: {
+        Row: {
+          created_at: string;
+          invited_by: string | null;
+          is_admin: boolean;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          invited_by?: string | null;
+          is_admin?: boolean;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          invited_by?: string | null;
+          is_admin?: boolean;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       quotes_latest: {
         Row: {
           fetched_at: string;
@@ -269,6 +326,32 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_instruments: {
+        Row: {
+          created_at: string;
+          instrument_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          instrument_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          instrument_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_instruments_instrument_id_fkey';
+            columns: ['instrument_id'];
+            isOneToOne: false;
+            referencedRelation: 'instruments';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       worker_status: {
         Row: {
           id: number;
@@ -295,6 +378,12 @@ export type Database = {
       assert_no_oversell: {
         Args: { p_instrument: string; p_user: string };
         Returns: undefined;
+      };
+      invitation_is_valid: { Args: { p_code: string }; Returns: boolean };
+      is_admin: { Args: never; Returns: boolean };
+      track_instrument: {
+        Args: { p_exchange?: string; p_name?: string; p_symbol: string };
+        Returns: string;
       };
     };
     Enums: {
