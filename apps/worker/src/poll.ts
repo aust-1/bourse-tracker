@@ -22,6 +22,8 @@ interface Deps {
   provider: Pick<PriceProvider, 'getQuote'>;
   log: Logger;
   concurrency?: number;
+  /** Se limite à ces instruments (défaut : tous les instruments suivis). */
+  only?: ReadonlySet<string>;
 }
 
 /** Un cycle de polling : récupère les cotes, n'écrit que ce qui a changé. */
@@ -30,8 +32,9 @@ export async function pollCycle({
   provider,
   log,
   concurrency = 5,
+  only,
 }: Deps): Promise<CycleResult> {
-  const tracked = await store.listTrackedInstruments();
+  const tracked = (await store.listTrackedInstruments()).filter((t) => !only || only.has(t.id));
   if (tracked.length === 0) return { quotes: [], updated: 0, failed: [] };
 
   const bySymbol = new Map(tracked.map((t) => [t.symbol, t]));
