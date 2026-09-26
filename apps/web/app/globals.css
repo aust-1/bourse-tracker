@@ -28,3 +28,23 @@ body {
   @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Graphiques : palette de référence (série 1 = bleu), clair et sombre sélectionnés */
+.viz-root {
+  color-scheme: light;
+  --viz-surface: #fcfcfb;
+  --viz-text: #0b0b0b;
+  --viz-text-2: #52514e;
+  --viz-grid: #e4e3dd;
+  --series-1: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  .viz-root {
+    color-scheme: dark;
+    --viz-surface: #1a1a19;
+    --viz-text: #ffffff;
+    --viz-text-2: #c3c2b7;
+    --viz-grid: #34332f;
+    --series-1: #3987e5;
+  }
+}
