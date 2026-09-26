@@ -4,19 +4,17 @@ import { dbErrorMessage } from './orders';
 import { yahoo } from './yahoo';
 
 /**
- * Retrouve l'instrument par son symbole Yahoo, ou le crée après avoir vérifié
- * qu'il existe et qu'il est coté en EUR.
+ * Ajoute l'instrument (symbole Yahoo) aux titres suivis par l'utilisateur et renvoie son id.
+ * Un instrument encore inconnu de la base est d'abord vérifié auprès de la source de prix :
+ * il doit exister et être coté en EUR.
  */
 export async function ensureInstrument(
   supabase: SupabaseClient<Database>,
   symbol: string,
 ): Promise<{ id?: string; error?: string }> {
-  const existing = await supabase
-    .from('instruments')
-    .select('id')
-    .eq('yahoo_symbol', symbol)
-    .maybeSingle();
-  if (existing.data) return { id: existing.data.id };
+  const known = await supabase.rpc('track_instrument', { p_symbol: symbol });
+  if (known.error) return { error: dbErrorMessage(known.error) };
+  if (known.data) return { id: known.data };
 
   let quote;
   try {
@@ -29,25 +27,13 @@ export async function ensureInstrument(
       error: `Seuls les titres cotés en EUR sont acceptés (${symbol} est en ${quote.currency}).`,
     };
   }
-  const inserted = await supabase
-    .from('instruments')
-    .insert({
-      yahoo_symbol: symbol,
-      name: quote.name ?? symbol,
-      exchange: quote.exchange,
-      currency: 'EUR',
-    })
-    .select('id')
-    .single();
-  if (inserted.error) {
-    // course possible avec un autre ajout simultané : on relit
-    const again = await supabase
-      .from('instruments')
-      .select('id')
-      .eq('yahoo_symbol', symbol)
-      .maybeSingle();
-    if (again.data) return { id: again.data.id };
-    return { error: dbErrorMessage(inserted.error) };
+  const created = await supabase.rpc('track_instrument', {
+    p_symbol: symbol,
+    p_name: quote.name ?? symbol,
+    p_exchange: quote.exchange ?? undefined,
+  });
+  if (created.error || !created.data) {
+    return { error: created.error ? dbErrorMessage(created.error) : 'Instrument non enregistré.' };
   }
-  return { id: inserted.data.id };
+  return { id: created.data };
 }

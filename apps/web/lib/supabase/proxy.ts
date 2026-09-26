@@ -22,16 +22,19 @@ export async function updateSession(request: NextRequest) {
   );
 
   const { data } = await supabase.auth.getClaims();
-  const isLogin = request.nextUrl.pathname.startsWith('/login');
+  const { pathname } = request.nextUrl;
+  // pages des visiteurs : connexion et inscription sur invitation
+  const isPublic = pathname.startsWith('/login') || pathname.startsWith('/signup');
 
-  if (!data?.claims && !isLogin) {
+  if (!data?.claims && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
-  if (data?.claims && isLogin) {
+  if (data?.claims && isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
+    url.search = '';
     return NextResponse.redirect(url);
   }
   return response;
