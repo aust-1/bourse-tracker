@@ -2,8 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { evaluateAlerts } from './alerts';
 import { silentLogger } from './log';
 import { MemoryStore } from './memory-store';
-import type { Message } from './messages';
-import type { Delivery } from './notify';
+import type { Delivery, Message } from '@bourse/providers';
 import type { FreshQuote } from './poll';
 
 const inSession = new Date('2026-09-25T10:00:00Z');

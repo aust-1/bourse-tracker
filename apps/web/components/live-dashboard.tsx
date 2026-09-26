@@ -9,7 +9,7 @@ import {
   type InstrumentRow,
   type OrderRow,
   type QuoteRow,
-} from '@/lib/portfolio-view';
+} from '@bourse/core';
 import { loadQuotes, toQuoteRow } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/browser';
 import { Pl } from './pl';

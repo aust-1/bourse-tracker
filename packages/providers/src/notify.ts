@@ -1,5 +1,14 @@
-import type { Message } from './messages';
-import type { UserSettings } from './store';
+/** Message à notifier. `level` colore l'embed Discord. */
+export interface Message {
+  title: string;
+  body: string;
+  level?: 'info' | 'warning' | 'success';
+}
+
+export interface NotifyTarget {
+  discordWebhookUrl: string | null;
+  email: string | null;
+}
 
 export type DeliveryStatus = 'sent' | 'not_configured' | `error: ${string}`;
 export type Delivery = Record<string, DeliveryStatus>;
@@ -75,7 +84,7 @@ export class Notifier {
 
   /** Envoie sur les canaux demandés ; ne lève jamais, rapporte l'état de chaque canal. */
   async notify(
-    settings: Pick<UserSettings, 'discordWebhookUrl' | 'email'> | null,
+    settings: NotifyTarget | null,
     channels: readonly string[],
     msg: Message,
   ): Promise<Delivery> {

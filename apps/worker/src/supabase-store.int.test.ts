@@ -2,12 +2,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@bourse/db';
-import type { Quote } from '@bourse/providers';
+import { Notifier, type Quote } from '@bourse/providers';
 import { SERVICE_ROLE_KEY, SUPABASE_URL } from '../../../e2e/env';
 import { evaluateAlerts } from './alerts';
 import { HistoryJob } from './history';
 import { silentLogger } from './log';
-import { Notifier } from './notify';
 import { pollCycle } from './poll';
 import { SupabaseStore } from './supabase-store';
 

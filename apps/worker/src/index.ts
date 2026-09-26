@@ -1,13 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@bourse/db';
 import { isMarketOpen } from '@bourse/core';
-import { YahooProvider } from '@bourse/providers';
+import { Notifier, YahooProvider } from '@bourse/providers';
 import { evaluateAlerts } from './alerts';
 import { loadConfig } from './config';
 import { HistoryJob } from './history';
 import { logger as log } from './log';
 import { SourceMonitor } from './monitor';
-import { Notifier } from './notify';
 import { pollCycle } from './poll';
 import { startHeartbeat, startScheduler } from './scheduler';
 import { SupabaseStore } from './supabase-store';

@@ -1,11 +1,8 @@
 import { describeCondition, fmtEur, fmtPct, type AlertType } from '@bourse/core';
 
-export interface Message {
-  title: string;
-  body: string;
-  /** Gravité : colore l'embed Discord */
-  level?: 'info' | 'warning' | 'success';
-}
+import type { Message } from '@bourse/providers';
+
+export type { Message };
 
 export { describeCondition, fmtEur, fmtPct };
 

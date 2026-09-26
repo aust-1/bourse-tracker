@@ -1,11 +1,7 @@
-import {
-  computePosition,
-  dayPl,
-  isMarketOpen,
-  parisDate,
-  valuePosition,
-  type Order,
-} from '@bourse/core';
+import { isMarketOpen, parisDate } from './market';
+import { computePosition } from './positions';
+import type { Order } from './types';
+import { dayPl, valuePosition } from './valuation';
 
 export interface InstrumentRow {
   id: string;

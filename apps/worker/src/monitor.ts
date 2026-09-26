@@ -1,5 +1,5 @@
 import { isPollingWindow } from '@bourse/core';
-import type { Message } from './messages';
+import type { Message } from '@bourse/providers';
 
 /**
  * Surveille la source de prix : si aucun cycle n'obtient de cotes pendant plus de

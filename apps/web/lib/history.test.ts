@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHistory, periodStats, rangeStart } from './history';
-import type { OrderRow, QuoteRow } from './portfolio-view';
+import type { OrderRow, QuoteRow } from '@bourse/core';
 
 const order = (
   id: string,

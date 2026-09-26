@@ -1,6 +1,6 @@
 import type { Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { InstrumentRow, OrderRow, QuoteRow } from './portfolio-view';
+import type { InstrumentRow, OrderRow, QuoteRow } from '@bourse/core';
 
 type Client = SupabaseClient<Database>;
 

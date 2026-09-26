@@ -1,7 +1,7 @@
 import { computePosition, evaluateAlert, isPollingWindow } from '@bourse/core';
 import type { Logger } from './log';
 import { alertMessage } from './messages';
-import { allFailed, type Notifier } from './notify';
+import { allFailed, type Notifier } from '@bourse/providers';
 import type { FreshQuote } from './poll';
 import type { Store } from './store';
 

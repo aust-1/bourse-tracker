@@ -1,7 +1,7 @@
 import { buildSnapshots, parisDate, type Snapshot } from '@bourse/core';
 import type { Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { OrderRow, QuoteRow } from './portfolio-view';
+import type { OrderRow, QuoteRow } from '@bourse/core';
 
 export const RANGES = [
   { key: '1m', label: '1 M' },
