@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Exécuté sur le VPS (à la main ou par le workflow de déploiement).
+# Exécuté sur le VPS (à la main, ou par .github/workflows/deploy.yml après une CI verte).
 # Récupère la dernière version de main, reconstruit les images et redémarre les services.
+#
+# Ce dépôt est un sous-module du dépôt opt (apps/bourse-tracker) : ce script avance SON
+# propre HEAD (légitime, c'est son dépôt), puis, si présent, aligne le pointeur enregistré
+# par le dépôt opt sur le commit réellement déployé (scripts/app-bump.sh) — sans quoi
+# `git status` à la racine de /opt afficherait ce sous-module comme modifié en permanence.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -13,14 +18,26 @@ docker compose up -d --remove-orphans
 docker image prune -f >/dev/null
 
 # Le site doit répondre avant de déclarer le déploiement réussi
+ok=0
 for i in $(seq 1 30); do
   if docker compose exec -T web wget -qO- http://127.0.0.1:3000/login >/dev/null 2>&1; then
-    echo "Déploiement OK ($(git rev-parse --short HEAD))"
-    exit 0
+    ok=1
+    break
   fi
   sleep 2
 done
 
-echo "Le site ne répond pas après le déploiement" >&2
-docker compose logs --tail=50 web worker >&2
-exit 1
+if [[ "$ok" != "1" ]]; then
+  echo "Le site ne répond pas après le déploiement" >&2
+  docker compose logs --tail=50 web worker >&2
+  exit 1
+fi
+
+echo "Déploiement OK ($(git rev-parse --short HEAD))"
+
+REPO_ROOT="$PWD"
+OPT_BUMP="$REPO_ROOT/../../scripts/app-bump.sh"
+if [[ -x "$OPT_BUMP" ]]; then
+  "$OPT_BUMP" --to "$(git rev-parse HEAD)" --commit "$(basename "$REPO_ROOT")" \
+    || echo "app-bump.sh : pointeur non aligné dans le dépôt opt (à faire à la main)" >&2
+fi

@@ -1,7 +1,7 @@
 name: Déploiement
 # Déploie sur le VPS quand la CI de `main` est verte.
 # Secrets requis (Settings → Secrets and variables → Actions) :
-#   VPS_HOST, VPS_USER, VPS_PATH (ex. /opt/bourse-tracker)
+#   VPS_HOST, VPS_USER, VPS_PATH (ex. /opt/apps/bourse-tracker : sous-module du dépôt opt)
 #   VPS_SSH_KEY     clé privée dédiée au déploiement
 #   VPS_KNOWN_HOSTS clé d'hôte du serveur, obtenue UNE fois depuis un réseau de confiance :
 #                     ssh-keyscan -t ed25519 <ip-du-vps>

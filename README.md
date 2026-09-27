@@ -37,7 +37,7 @@ Yahoo Finance ──(30 s, séance)──▶ worker ──▶ Supabase (Postgres
 | `packages/providers` | Source de prix (interface `PriceProvider` + Yahoo) et notifications Discord/Resend        |
 | `packages/db`        | Types générés de la base et lecture paginée                                               |
 | `supabase/`          | Migrations SQL, RLS, tests pgTAP                                                          |
-| `infra/`             | Docker, labels Traefik, déploiement, sauvegarde et restauration                           |
+| `infra/`             | Docker, déploiement, sauvegarde et restauration                                           |
 | `docs/DEPLOY.md`     | **Mise en production pas à pas** et que faire en cas de panne                             |
 
 Décisions à connaître :

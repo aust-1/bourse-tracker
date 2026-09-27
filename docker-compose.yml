@@ -1,9 +1,10 @@
 # Déploiement sur le VPS : `docker compose up -d --build` (le fichier .env est lu automatiquement).
 #
-# Le VPS héberge déjà un reverse proxy Traefik (ports 80/443) : ce fichier ne publie aucun port,
-# il déclare le site auprès de Traefik par des labels, sur son réseau Docker partagé.
-# Les noms ci-dessous (réseau, entrypoint, résolveur de certificats) sont ceux du VPS ;
-# ils se changent dans .env (TRAEFIK_NETWORK, TRAEFIK_ENTRYPOINT, TRAEFIK_CERTRESOLVER).
+# Le VPS héberge un reverse proxy Caddy partagé (ports 80/443) : ce fichier ne publie aucun
+# port. Le routage vers ce service est déclaré dans ./Caddyfile (voir docs/DEPLOY.md du dépôt
+# opt), qui cible l'alias réseau ci-dessous sur le réseau externe partagé.
+name: bourse-tracker
+
 x-logging: &logging
   driver: json-file
   options:
@@ -27,24 +28,16 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
     networks:
-      - default
-      - traefik
-    labels:
-      - traefik.enable=true
-      # le conteneur est sur deux réseaux : Traefik doit savoir lequel utiliser
-      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik-network}
-      - traefik.http.routers.bourse.rule=Host(`${DOMAIN:?DOMAIN manquant dans .env}`)
-      - traefik.http.routers.bourse.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
-      - traefik.http.routers.bourse.tls.certresolver=${TRAEFIK_CERTRESOLVER:-myresolver}
-      - traefik.http.routers.bourse.middlewares=bourse-compress,bourse-headers
-      - traefik.http.services.bourse.loadbalancer.server.port=3000
-      - traefik.http.middlewares.bourse-compress.compress=true
-      - traefik.http.middlewares.bourse-headers.headers.stsSeconds=31536000
-      - traefik.http.middlewares.bourse-headers.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.bourse-headers.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.bourse-headers.headers.frameDeny=true
-      - traefik.http.middlewares.bourse-headers.headers.referrerPolicy=strict-origin-when-cross-origin
-      - traefik.http.middlewares.bourse-headers.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
+      default: {}
+      proxy:
+        aliases:
+          - bourse-web # cible du reverse_proxy dans ./Caddyfile
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     logging: *logging
 
   worker:
@@ -65,7 +58,7 @@ services:
     logging: *logging
 
 networks:
-  # réseau du Traefik existant (créé par son propre docker-compose)
-  traefik:
+  # réseau partagé du proxy Caddy (créé par scripts/network-create.sh du dépôt opt)
+  proxy:
     external: true
-    name: ${TRAEFIK_NETWORK:-traefik-network}
+    name: ${PROXY_NETWORK:-proxy}
