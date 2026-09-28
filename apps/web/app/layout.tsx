@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Statistiques de visite (Rybbit auto-hébergé, sans cookie) ; l'ID vient du tableau de bord */}
         {process.env.NODE_ENV === 'production' && (
           <Script
-            src="https://analytics.eliott-roussille.fr/api/script.js"
+            src="https://analytics.eliott-roussille.fr/api/script.js?siteId=2a423da9594b"
             data-site-id="3"
             strategy="afterInteractive"
           />
