@@ -62,28 +62,28 @@ export default async function HistoryPage({
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="card">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Valeur actuelle</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums">
+              <p className="text-xs text-slate-500">Valeur actuelle</p>
+              <p className="mt-1 display tabular-nums">
                 {eur(stats.end.marketValue)}
               </p>
             </div>
             <div className="card">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Gain sur la période</p>
-              <p className="mt-1 text-xl font-semibold">
+              <p className="text-xs text-slate-500">Gain sur la période</p>
+              <p className="mt-1 display">
                 <Pl value={stats.gain} />
               </p>
               <p className="mt-1 text-xs text-slate-500">Hors apports (achats et ventes)</p>
             </div>
             <div className="card">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Rendement</p>
-              <p className="mt-1 text-xl font-semibold">
+              <p className="text-xs text-slate-500">Rendement</p>
+              <p className="mt-1 display">
                 <Pl value={stats.gainPct} kind="pct" />
               </p>
               <p className="mt-1 text-xs text-slate-500">Base : valeur de départ + apports</p>
             </div>
             <div className="card">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Apports nets</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums">{eur(stats.contributions)}</p>
+              <p className="text-xs text-slate-500">Apports nets</p>
+              <p className="mt-1 display tabular-nums">{eur(stats.contributions)}</p>
               <p className="mt-1 text-xs text-slate-500">Achats moins ventes sur la période</p>
             </div>
           </div>

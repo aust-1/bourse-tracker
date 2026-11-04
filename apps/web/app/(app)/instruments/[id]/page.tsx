@@ -55,7 +55,7 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
         </div>
         {quote.data && (
           <div className="text-right">
-            <p className="text-2xl font-semibold tabular-nums">{eur(quote.data.price)}</p>
+            <p className="display tabular-nums">{eur(quote.data.price)}</p>
             <Pl value={v?.dayChangePct ?? null} kind="pct" />
           </div>
         )}

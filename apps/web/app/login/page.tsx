@@ -7,7 +7,7 @@ export default function LoginPage() {
   const [state, action, pending] = useActionState<FormState, FormData>(signIn, {});
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
-      <h1 className="text-2xl font-semibold">Bourse Tracker</h1>
+      <h1>BOURSE TRACKER<span className="ml-2 inline-block h-9 w-4 translate-y-1 bg-phosphor" aria-hidden /></h1>
       <form action={action} className="flex flex-col gap-3">
         <input
           name="email"

@@ -15,7 +15,7 @@ export default async function SignUpPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
-      <h1 className="text-2xl font-semibold">Bourse Tracker</h1>
+      <h1>BOURSE TRACKER<span className="ml-2 inline-block h-9 w-4 translate-y-1 bg-phosphor" aria-hidden /></h1>
       {code && valid ? (
         <>
           <p className="text-sm text-slate-600 dark:text-slate-400">
