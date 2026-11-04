@@ -134,11 +134,13 @@ h2::before {
   content: '> ';
 }
 
-a {
-  color: var(--color-phosphor);
-}
-a:hover {
-  color: var(--color-amber-crt);
+@layer base {
+  a {
+    color: var(--color-phosphor);
+  }
+  a:hover {
+    color: var(--color-amber-crt);
+  }
 }
 
 :focus-visible {
