@@ -63,9 +63,7 @@ export default async function HistoryPage({
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="card">
               <p className="text-xs text-slate-500">Valeur actuelle</p>
-              <p className="mt-1 display tabular-nums">
-                {eur(stats.end.marketValue)}
-              </p>
+              <p className="mt-1 display tabular-nums">{eur(stats.end.marketValue)}</p>
             </div>
             <div className="card">
               <p className="text-xs text-slate-500">Gain sur la période</p>

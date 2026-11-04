@@ -4,7 +4,12 @@ import Script from 'next/script';
 import './globals.css';
 
 const fira = Fira_Code({ subsets: ['latin'], variable: '--font-fira', display: 'swap' });
-const vt323 = VT323({ subsets: ['latin'], weight: '400', variable: '--font-vt323', display: 'swap' });
+const vt323 = VT323({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-vt323',
+  display: 'swap',
+});
 
 export const metadata: Metadata = { title: 'Bourse Tracker' };
 

@@ -20,13 +20,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <span>BOURSE.SYS</span>
         <nav className="flex flex-1 flex-wrap gap-x-5 gap-y-1 text-sm">
           {nav.map((l, i) => (
-            <Link key={l.href} href={l.href} className="text-tube hover:bg-tube hover:text-phosphor">
+            <Link
+              key={l.href}
+              href={l.href}
+              className="text-tube hover:bg-tube hover:text-phosphor"
+            >
               [F{i + 1}] {l.label.toLowerCase()}
             </Link>
           ))}
         </nav>
         <form action={signOut}>
-          <button className="text-sm text-tube hover:bg-tube hover:text-phosphor">[esc] déconnexion</button>
+          <button className="text-sm text-tube hover:bg-tube hover:text-phosphor">
+            [esc] déconnexion
+          </button>
         </form>
       </header>
       <main className="px-4 pt-6">{children}</main>
