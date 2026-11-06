@@ -32,16 +32,15 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
   ]);
   if (!inst.data) notFound();
 
-  const pos = computePosition(
-    orders.map((o) => ({
-      id: o.id,
-      side: o.side,
-      quantity: o.quantity,
-      unitPrice: o.unit_price,
-      fees: o.fees,
-      executedAt: o.executed_at,
-    })),
-  );
+  const myOrders = orders.map((o) => ({
+    id: o.id,
+    side: o.side,
+    quantity: o.quantity,
+    unitPrice: o.unit_price,
+    fees: o.fees,
+    executedAt: o.executed_at,
+  }));
+  const pos = computePosition(myOrders);
   const v = quote.data ? valuePosition(pos, quote.data.price, quote.data.prev_close) : null;
 
   return (
@@ -61,7 +60,7 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
         )}
       </div>
 
-      <InstrumentChart instrumentId={inst.data.id} name={inst.data.name} />
+      <InstrumentChart instrumentId={inst.data.id} name={inst.data.name} orders={myOrders} />
 
       <section className="card">
         <h2 className="mb-2 text-sm font-medium">Ma position</h2>

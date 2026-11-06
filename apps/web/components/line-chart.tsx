@@ -2,8 +2,9 @@
 
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,6 +16,8 @@ export interface ChartPoint {
   /** Instant en ms depuis l'epoch */
   t: number;
   v: number;
+  /** Courbe de référence (prix d'achat) ; null quand elle n'a pas de sens (aucune position) */
+  ref?: number | null;
 }
 
 interface Props {
@@ -23,6 +26,8 @@ interface Props {
   label: string;
   /** 'time' : axe en heures ; 'date' : axe en jours */
   axis: 'time' | 'date';
+  /** Nom de la courbe de référence `ref` (ex. PRU, montant investi) */
+  refLabel?: string;
   height?: number;
 }
 
@@ -36,12 +41,22 @@ const fmtFull = (axis: Props['axis']) => (t: number) =>
     ? new Date(t).toLocaleString('fr-FR', { ...tzOpts, dateStyle: 'short', timeStyle: 'short' })
     : new Date(t).toLocaleDateString('fr-FR', { ...tzOpts, dateStyle: 'medium' });
 
-/** Courbe unique : 2 px, quadrillage horizontal discret, infobulle au survol, vue tableau. */
-export function LineChart({ data, label, axis, height = 280 }: Props) {
+const hasRef = (d: ChartPoint): d is ChartPoint & { ref: number } =>
+  d.ref !== undefined && d.ref !== null;
+
+/**
+ * Courbe principale (2 px, aire légère) et, si fournie, courbe de référence en pointillés
+ * (prix d'achat). Quadrillage horizontal discret, infobulle au survol, vue tableau.
+ */
+export function LineChart({ data, label, axis, refLabel, height = 280 }: Props) {
   if (data.length < 2) {
     return <p className="text-sm text-slate-500">Pas assez de données pour tracer une courbe.</p>;
   }
-  const values = data.map((d) => d.v);
+  const showRef = refLabel !== undefined && data.some(hasRef);
+  const values = [
+    ...data.map((d) => d.v),
+    ...(showRef ? data.filter(hasRef).map((d) => d.ref) : []),
+  ];
   const min = Math.min(...values);
   const max = Math.max(...values);
   const pad = (max - min) * 0.1 || max * 0.01;
@@ -51,12 +66,39 @@ export function LineChart({ data, label, axis, height = 280 }: Props) {
 
   return (
     <figure className="viz-root rounded-lg p-3" style={{ background: 'var(--viz-surface)' }}>
-      <figcaption className="mb-2 text-sm" style={{ color: 'var(--viz-text-2)' }}>
-        {label}
+      <figcaption
+        className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+        style={{ color: 'var(--viz-text-2)' }}
+      >
+        {showRef ? (
+          <>
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block h-0.5 w-4"
+                style={{ background: 'var(--series-1)' }}
+              />
+              {label}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block w-4 border-t-2 border-dashed"
+                style={{ borderColor: 'var(--series-ref)' }}
+              />
+              {refLabel}
+            </span>
+          </>
+        ) : (
+          label
+        )}
       </figcaption>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data as ChartPoint[]} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <ComposedChart
+            data={data as ChartPoint[]}
+            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+          >
             <CartesianGrid vertical={false} stroke="var(--viz-grid)" strokeDasharray="3 3" />
             <XAxis
               dataKey="t"
@@ -100,6 +142,16 @@ export function LineChart({ data, label, axis, height = 280 }: Props) {
                       />
                       {label} : {eur(p.v)}
                     </div>
+                    {showRef && hasRef(p) && (
+                      <div className="mt-0.5 flex items-center gap-2 tabular-nums">
+                        <span
+                          aria-hidden
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ background: 'var(--series-ref)' }}
+                        />
+                        {refLabel} : {eur(p.ref)}
+                      </div>
+                    )}
                   </div>
                 );
               }}
@@ -120,7 +172,20 @@ export function LineChart({ data, label, axis, height = 280 }: Props) {
               }}
               isAnimationActive={false}
             />
-          </AreaChart>
+            {showRef && (
+              <Line
+                type="stepAfter"
+                dataKey="ref"
+                stroke="var(--series-ref)"
+                strokeWidth={1.5}
+                strokeDasharray="5 4"
+                dot={false}
+                activeDot={false}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
       <details className="mt-2 text-xs" style={{ color: 'var(--viz-text-2)' }}>
@@ -130,6 +195,7 @@ export function LineChart({ data, label, axis, height = 280 }: Props) {
             <tr>
               <th className="py-1 text-left font-medium">Date</th>
               <th className="py-1 text-right font-medium">{label}</th>
+              {showRef && <th className="py-1 text-right font-medium">{refLabel}</th>}
             </tr>
           </thead>
           <tbody>
@@ -139,6 +205,11 @@ export function LineChart({ data, label, axis, height = 280 }: Props) {
                 <tr key={d.t}>
                   <td className="py-0.5">{full(d.t)}</td>
                   <td className="py-0.5 text-right tabular-nums">{eur(d.v)}</td>
+                  {showRef && (
+                    <td className="py-0.5 text-right tabular-nums">
+                      {hasRef(d) ? eur(d.ref) : '—'}
+                    </td>
+                  )}
                 </tr>
               ))}
           </tbody>

@@ -88,10 +88,12 @@ export default async function HistoryPage({
 
           <LineChart
             label="Valeur du portefeuille"
+            refLabel="Montant investi"
             axis="date"
             data={stats.points.map((s) => ({
               t: Date.parse(`${s.date}T12:00:00Z`),
               v: s.marketValue,
+              ref: s.netContributions,
             }))}
           />
         </>

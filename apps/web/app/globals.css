@@ -168,4 +168,6 @@ h2::before {
   --viz-text-2: #8fc79b;
   --viz-grid: #23402a;
   --series-1: #6dff8e;
+  /* courbe de référence (prix d'achat) : ambre, distinct du phosphore vert */
+  --series-ref: var(--color-amber-crt);
 }

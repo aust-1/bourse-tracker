@@ -65,3 +65,31 @@ export function buildSnapshots(
     return { date, marketValue, costBasis, realizedPl, netContributions };
   });
 }
+
+/**
+ * PRU de la position à chaque instant de `times` (ms depuis l'epoch, croissants) ; `null` quand
+ * aucune position n'est ouverte. Avec `byDay`, un ordre compte dès le point de sa date parisienne
+ * (points journaliers dont l'horodatage précède l'heure d'exécution).
+ */
+export function avgCostSeries(
+  orders: readonly Order[],
+  times: readonly number[],
+  byDay = false,
+): (number | null)[] {
+  const sorted = sortOrders(orders);
+  let pos = EMPTY_POSITION;
+  let i = 0;
+  return times.map((t) => {
+    const day = byDay ? parisDate(new Date(t)) : null;
+    while (
+      i < sorted.length &&
+      (day !== null
+        ? parisDate(sorted[i]!.executedAt) <= day
+        : new Date(sorted[i]!.executedAt).getTime() <= t)
+    ) {
+      pos = applyOrder(pos, sorted[i]!);
+      i++;
+    }
+    return pos.quantity > 0 ? pos.avgCost : null;
+  });
+}

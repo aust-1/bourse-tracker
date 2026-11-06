@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSnapshots } from './portfolio';
+import { avgCostSeries, buildSnapshots } from './portfolio';
 import type { Order } from './types';
 
 const o = (
@@ -65,5 +65,37 @@ describe('buildSnapshots', () => {
     };
     const s = buildSnapshots([inst, other], ['2026-09-22']);
     expect(s[0]!.marketValue).toBe(1040);
+  });
+});
+
+describe('avgCostSeries', () => {
+  const at = (iso: string) => Date.parse(iso);
+  const orders = [
+    o('a', 'buy', 1, 100, '2026-09-22T09:00:00Z'),
+    o('b', 'buy', 2, 130, '2026-09-24T09:00:00Z'),
+  ];
+
+  it('suit le PRU pondéré au fil des achats', () => {
+    const s = avgCostSeries(orders, [
+      at('2026-09-22T08:00:00Z'),
+      at('2026-09-22T10:00:00Z'),
+      at('2026-09-23T10:00:00Z'),
+      at('2026-09-24T10:00:00Z'),
+    ]);
+    // 1 à 100 puis 2 à 130 : PRU aux 2/3 entre les deux
+    expect(s).toEqual([null, 100, 100, 120]);
+  });
+
+  it('byDay : un ordre compte dès le point de sa journée', () => {
+    const s = avgCostSeries(orders, [at('2026-09-22T07:00:00Z'), at('2026-09-24T07:00:00Z')], true);
+    expect(s).toEqual([100, 120]);
+  });
+
+  it('null une fois la position soldée', () => {
+    const s = avgCostSeries(
+      [...orders, o('c', 'sell', 3, 140, '2026-09-25T09:00:00Z')],
+      [at('2026-09-25T10:00:00Z')],
+    );
+    expect(s).toEqual([null]);
   });
 });

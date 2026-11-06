@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { avgCostSeries, type Order } from '@bourse/core';
+import { useEffect, useMemo, useState } from 'react';
 import { LineChart, type ChartPoint } from './line-chart';
 
 const RANGES = [
@@ -9,7 +10,16 @@ const RANGES = [
   { key: '1y', label: '1 A', axis: 'date' },
 ] as const;
 
-export function InstrumentChart({ instrumentId, name }: { instrumentId: string; name: string }) {
+export function InstrumentChart({
+  instrumentId,
+  name,
+  orders,
+}: {
+  instrumentId: string;
+  name: string;
+  /** Ordres de l'utilisateur sur ce titre : courbe du PRU au fil du temps */
+  orders: readonly Order[];
+}) {
   const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[0]);
   const [points, setPoints] = useState<ChartPoint[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +40,16 @@ export function InstrumentChart({ instrumentId, name }: { instrumentId: string; 
     return () => ctrl.abort();
   }, [instrumentId, range]);
 
+  const data = useMemo(() => {
+    if (!points) return null;
+    const pru = avgCostSeries(
+      orders,
+      points.map((p) => p.t),
+      range.axis === 'date',
+    );
+    return points.map((p, i) => ({ ...p, ref: pru[i] }));
+  }, [points, orders, range]);
+
   return (
     <div className="flex flex-col gap-3">
       <div role="tablist" className="flex gap-1">
@@ -49,7 +69,7 @@ export function InstrumentChart({ instrumentId, name }: { instrumentId: string; 
       </div>
       {error && <p className="text-sm text-red-600">Graphique indisponible : {error}</p>}
       {!error && !points && <p className="text-sm text-slate-500">Chargement…</p>}
-      {points && <LineChart data={points} label={name} axis={range.axis} />}
+      {data && <LineChart data={data} label={name} refLabel="PRU" axis={range.axis} />}
     </div>
   );
 }
