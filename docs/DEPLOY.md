@@ -86,11 +86,22 @@ vérification des ordres, alertes, comptes et instruments.
 
 ## 5. Déploiement automatique (optionnel)
 
-Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
-`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé privée dédiée, dont la clé publique est dans `~/.ssh/authorized_keys` du VPS),
-`VPS_PATH` (`/opt/apps/bourse-tracker`) et `VPS_KNOWN_HOSTS`. Ce dernier est la clé d'hôte du serveur, à récupérer
-une seule fois depuis un réseau de confiance : `ssh-keyscan -t ed25519 <ip-du-vps>`. Elle est épinglée dans le workflow
-(`StrictHostKeyChecking=yes`), de sorte qu'un intercepteur ne puisse pas se faire passer pour ton serveur. À chaque `push` sur `main` dont la CI est verte, le VPS exécute `infra/deploy.sh`, qui avance SON dépôt (`git fetch`/`reset --hard origin/main`), reconstruit, redémarre, attend que le site réponde, puis aligne automatiquement le pointeur du sous-module dans le dépôt opt (`scripts/app-bump.sh`) — sans quoi `git status` dans `/opt` afficherait ce sous-module comme modifié en permanence. Ce déploiement automatique ne pousse jamais rien : le commit créé dans opt reste local, à pousser toi-même.
+Comme toutes les apps du VPS (détail : `docs/ci-deploy.md` du dépôt opt) : à chaque `push` sur
+`main` dont la CI est verte, le workflow **Déploiement** se connecte au compte `gh-deploy` avec une
+clé bridée à une seule commande, `sudo opt-deploy bourse-tracker`. Le serveur avance ce sous-module
+sur `origin/main` (et refuse s'il y trouve des modifications locales), reconstruit les images,
+attend que les conteneurs soient sains, republie la route, puis aligne le pointeur du sous-module
+dans le dépôt opt (commit local, jamais poussé).
+
+1. Sur le serveur, en root, une fois : `scripts/deploy-install.sh`, puis
+   `scripts/deploy-install.sh --key bourse-tracker 'ssh-ed25519 …'` avec la clé publique d'une paire
+   créée pour ce dépôt seulement (`ssh-keygen -t ed25519 -N '' -C deploy-bourse-tracker -f deploy-bourse-tracker`).
+2. Dans GitHub → Settings → Secrets and variables → Actions : `VPS_HOST`, `VPS_SSH_KEY` (la clé
+   **privée** de cette paire) et `VPS_KNOWN_HOSTS` (clé d'hôte du serveur, épinglée : voir
+   `docs/ci-deploy.md`). Les anciens secrets `VPS_USER` et `VPS_PATH` ne servent plus.
+
+Le déploiement automatique n'applique pas les migrations Supabase : `npx supabase db push` reste à
+lancer avant de pousser un code qui en dépend. À la main, sur le serveur : `sudo opt-deploy bourse-tracker`.
 
 ## 6. Inviter quelqu'un
 
@@ -107,7 +118,7 @@ les titres qu'il suit. Les messages système (source de prix en panne) ne vont q
    restent rattachés. À faire **avant** de pousser le code sur `main` : le nouveau site appelle des
    fonctions que crée cette migration (le déploiement automatique n'applique pas les migrations).
 2. Ajuste les réglages d'authentification de l'étape 1.
-3. Pousse le code sur `main` (ou `./infra/deploy.sh` sur le VPS).
+3. Pousse le code sur `main` (ou `sudo opt-deploy bourse-tracker` sur le VPS).
 
 ## 7. Première séance : mesurer le retard de Yahoo
 
@@ -132,4 +143,4 @@ et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 **Le worker ne « ping » plus** : Healthchecks.io t'envoie un email. `docker compose ps`, puis `docker compose restart worker`.
 
 **Le site ne répond plus** : `docker compose logs web`, puis, depuis `/opt`, `scripts/status.sh` (route publiée ?
-alias réseau correct ?) et `docker logs caddy`, puis `./infra/deploy.sh`.
+alias réseau correct ?) et `docker logs caddy`, puis `sudo opt-deploy bourse-tracker`.
