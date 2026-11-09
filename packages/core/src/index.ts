@@ -8,3 +8,4 @@ export * from './describe';
 export * from './portfolio-view';
 export * from './cash';
 export * from './splits';
+export * from './tax';

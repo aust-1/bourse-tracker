@@ -29,7 +29,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
       courbe et les liquidités.
 - [x] **2 — Divisions / regroupements (splits)** : événement de split qui ajuste quantités et PRU,
       pris en compte par le rejeu des ordres.
-- [ ] **6 — Date d'ouverture et ancienneté** : compteur des 5 ans, estimation des prélèvements
+- [x] **6 — Date d'ouverture et ancienneté** : compteur des 5 ans, estimation des prélèvements
       sociaux sur la plus-value latente (taux réglable).
 
 ## 4. Performance

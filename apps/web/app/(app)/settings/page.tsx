@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { AccountData } from '@/components/account-data';
 import { MfaSettings } from '@/components/mfa-settings';
 import { SettingsForm } from '@/components/settings-form';
+import { DEFAULT_INCOME_RATE, DEFAULT_SOCIAL_RATE } from '@/lib/settings';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,8 @@ export default async function SettingsPage() {
           summaryEnabled: data?.summary_enabled ?? true,
           // la base renvoie HH:MM:SS ; le champ time attend HH:MM
           summaryTime: (data?.summary_time ?? '17:45').slice(0, 5),
+          socialTaxRate: String(data?.social_tax_rate ?? DEFAULT_SOCIAL_RATE),
+          incomeTaxRate: String(data?.income_tax_rate ?? DEFAULT_INCOME_RATE),
         }}
       />
       <MfaSettings />

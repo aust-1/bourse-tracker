@@ -15,6 +15,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   (titres + liquidités) et jauges des plafonds de versements (PEA 150 000 €, PEA + PEA-PME 225 000 €).
 - **Divisions de titres** : saisies par l'administrateur sur la fiche du titre ; les ordres antérieurs sont
   convertis en titres d'après la division (position, PRU, courbes, contrôle du découvert).
+- **Fiscalité du PEA** : ancienneté (date des 5 ans) et estimation de l'impôt d'un retrait total
+  (prélèvements sociaux, plus l'impôt sur le revenu avant 5 ans ; taux réglables).
 - **Tableau de bord en direct** : valeur, variation du jour (tient compte des ordres passés dans la journée),
   gain latent et réalisé, PRU (méthode du prix moyen pondéré), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.

@@ -9,6 +9,8 @@ export interface SettingsValues {
   email: string;
   summaryEnabled: boolean;
   summaryTime: string;
+  socialTaxRate: string;
+  incomeTaxRate: string;
 }
 
 function TestButton({ channel, label }: { channel: 'discord' | 'email'; label: string }) {
@@ -93,6 +95,36 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
               (entre {SUMMARY_MIN} et {SUMMARY_MAX}, heure de Paris)
             </span>
           </label>
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-2 text-sm">
+          <legend className="mb-1">Fiscalité du PEA (estimations)</legend>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2">
+              Prélèvements sociaux
+              <input
+                name="socialTaxRate"
+                inputMode="decimal"
+                defaultValue={v?.socialTaxRate ?? values.socialTaxRate}
+                className="input w-20"
+              />
+              %
+            </label>
+            <label className="flex items-center gap-2">
+              Impôt sur le revenu (avant 5 ans)
+              <input
+                name="incomeTaxRate"
+                inputMode="decimal"
+                defaultValue={v?.incomeTaxRate ?? values.incomeTaxRate}
+                className="input w-20"
+              />
+              %
+            </label>
+          </div>
+          <span className="text-xs text-slate-500">
+            Taux appliqués à la plus-value en cas de retrait ; vérifie-les après chaque loi de
+            finances.
+          </span>
         </fieldset>
 
         {state.error && (

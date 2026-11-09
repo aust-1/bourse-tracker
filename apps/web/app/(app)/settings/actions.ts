@@ -28,6 +28,8 @@ export async function saveSettings(
       email: data.email,
       summary_enabled: data.summaryEnabled,
       summary_time: data.summaryTime,
+      social_tax_rate: data.socialTaxRate,
+      income_tax_rate: data.incomeTaxRate,
     },
     { onConflict: 'user_id' },
   );

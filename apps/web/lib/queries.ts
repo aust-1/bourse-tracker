@@ -6,7 +6,7 @@ import type { InstrumentRow, OrderRow, QuoteRow } from '@bourse/core';
 type Client = SupabaseClient<Database>;
 
 export interface PortfolioData {
-  orders: OrderRow[];
+  orders: (OrderRow & { portfolioId: string })[];
   instruments: InstrumentRow[];
   quotes: QuoteRow[];
 }
@@ -40,7 +40,7 @@ export async function loadPortfolioData(
     fetchAll((from, to) => {
       let q = supabase
         .from('orders')
-        .select('id, instrument_id, side, quantity, unit_price, fees, executed_at');
+        .select('id, instrument_id, portfolio_id, side, quantity, unit_price, fees, executed_at');
       if (portfolioId) q = q.eq('portfolio_id', portfolioId);
       return q.order('executed_at').order('id').range(from, to);
     }),
@@ -56,6 +56,7 @@ export async function loadPortfolioData(
       orders.map((o) => ({
         id: o.id,
         instrumentId: o.instrument_id,
+        portfolioId: o.portfolio_id,
         side: o.side,
         quantity: o.quantity,
         unitPrice: o.unit_price,
