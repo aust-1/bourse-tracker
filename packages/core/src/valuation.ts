@@ -65,3 +65,31 @@ export function dayPl(
   }
   return pl + openLeft * (price - prevClose);
 }
+
+export interface LineReturn {
+  /** Latent + réalisé + dividendes, en EUR */
+  totalGain: number;
+  /** Somme des achats, frais compris */
+  invested: number;
+  /** totalGain / invested, en pourcents ; null sans achat */
+  pct: number | null;
+}
+
+/**
+ * Performance totale d'une ligne depuis le premier achat : plus-value latente au cours `price`
+ * (null : sans cote, latent ignoré), plus-value réalisée et dividendes encaissés, rapportés à
+ * tout ce qui a été acheté.
+ */
+export function lineReturn(
+  orders: readonly Order[],
+  pos: Position,
+  price: number | null,
+  dividends = 0,
+): LineReturn {
+  const invested = orders
+    .filter((o) => o.side === 'buy')
+    .reduce((s, o) => s + o.quantity * o.unitPrice + o.fees, 0);
+  const unrealized = price === null ? 0 : pos.quantity * price - pos.costBasis;
+  const totalGain = unrealized + pos.realizedPl + dividends;
+  return { totalGain, invested, pct: invested > 0 ? (totalGain / invested) * 100 : null };
+}

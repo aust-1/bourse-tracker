@@ -43,6 +43,8 @@ test('mouvements : versement, dividende, liquidités et plafond du PEA', async (
   await expect(page.getByText('Dividendes reçus')).toBeVisible();
   await page.getByRole('link', { name: CW8.name }).click();
   await expect(page.getByTestId('instrument-dividends')).toContainText('12,50');
+  // sans cote : seuls les dividendes comptent dans la performance de la ligne
+  await expect(page.getByTestId('line-performance')).toContainText(/\+12,50\s€/);
 
   // suppression d'un mouvement
   await page.goto('/cash');

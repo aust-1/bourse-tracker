@@ -1,4 +1,4 @@
-import { adjustForSplits, computePosition, valuePosition } from '@bourse/core';
+import { adjustForSplits, computePosition, lineReturn, valuePosition } from '@bourse/core';
 import { fetchAll } from '@bourse/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -78,6 +78,7 @@ export default async function InstrumentPage({
   );
   const pos = computePosition(myOrders);
   const v = quote.data ? valuePosition(pos, quote.data.price, quote.data.prev_close) : null;
+  const perf = lineReturn(myOrders, pos, quote.data?.price ?? null, dividendTotal);
 
   return (
     <div className="flex flex-col gap-4">
@@ -133,6 +134,15 @@ export default async function InstrumentPage({
             Dividendes reçus : {eur(dividendTotal)} ({dividends.data!.length} versement
             {dividends.data!.length > 1 ? 's' : ''}, dernier le{' '}
             {dividends.data![0]!.occurred_on.split('-').reverse().join('/')})
+          </p>
+        )}
+        {perf.invested > 0 && (
+          <p className="mt-1 text-sm" data-testid="line-performance">
+            Performance totale : <Pl value={perf.totalGain} /> <Pl value={perf.pct} kind="pct" />
+            <span className="text-slate-500">
+              {' '}
+              (latent, réalisé et dividendes, sur {eur(perf.invested)} achetés)
+            </span>
           </p>
         )}
       </section>
