@@ -375,6 +375,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      aal_ok: { Args: never; Returns: boolean };
       assert_no_oversell: {
         Args: { p_instrument: string; p_user: string };
         Returns: undefined;

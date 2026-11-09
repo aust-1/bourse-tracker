@@ -18,6 +18,7 @@ test('mot de passe oublié : lien par email, nouveau mot de passe, reconnexion',
 
   await page.goto('/login');
   await page.getByRole('link', { name: 'Mot de passe oublié ?' }).click();
+  await page.waitForURL('**/forgot');
   await page.getByPlaceholder('Email').fill(TEST_EMAIL);
   await page.getByRole('button', { name: 'Recevoir un lien' }).click();
   await expect(page.getByRole('status')).toContainText('Si un compte existe');
@@ -55,6 +56,7 @@ test('mot de passe depuis les réglages', async ({ page }) => {
   await login(page);
   await page.goto('/settings');
   await page.getByRole('link', { name: 'Changer le mot de passe' }).click();
+  await page.waitForURL('**/settings/password');
   await page.getByLabel('Nouveau mot de passe').fill('court');
   await page.getByLabel('Confirmation').fill('court');
   await page.getByRole('button', { name: 'Changer le mot de passe' }).click();

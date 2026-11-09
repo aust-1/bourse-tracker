@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { routeAccess, safeNext } from './auth';
+import { needsSecondFactor, routeAccess, safeNext } from './auth';
 
 describe('safeNext', () => {
   it('garde un chemin local', () => {
@@ -11,6 +11,17 @@ describe('safeNext', () => {
       expect(safeNext(v)).toBe('/');
     },
   );
+});
+
+describe('needsSecondFactor', () => {
+  it.each([
+    [null, false],
+    [{ currentLevel: 'aal1', nextLevel: 'aal1' }, false],
+    [{ currentLevel: 'aal1', nextLevel: 'aal2' }, true],
+    [{ currentLevel: 'aal2', nextLevel: 'aal2' }, false],
+  ] as const)('%o → %s', (aal, expected) => {
+    expect(needsSecondFactor(aal)).toBe(expected);
+  });
 });
 
 describe('routeAccess', () => {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { MfaSettings } from '@/components/mfa-settings';
 import { SettingsForm } from '@/components/settings-form';
 import { createClient } from '@/lib/supabase/server';
 
@@ -25,6 +26,7 @@ export default async function SettingsPage() {
           summaryTime: (data?.summary_time ?? '17:45').slice(0, 5),
         }}
       />
+      <MfaSettings />
     </div>
   );
 }

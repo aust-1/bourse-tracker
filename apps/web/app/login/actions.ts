@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { needsSecondFactor } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 export interface FormState {
@@ -15,7 +16,8 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: 'Identifiants incorrects.' };
-  redirect('/');
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  redirect(needsSecondFactor(aal) ? '/mfa' : '/');
 }
 
 export async function signOut() {

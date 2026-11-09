@@ -34,6 +34,11 @@ Dans le tableau de bord Supabase :
      demande. Pour qu'il marche depuis n'importe quel appareil, remplace-le dans le modèle
      _Reset Password_ par
      `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/settings/password`.
+6. **Double authentification** : **Authentication → Multi-Factor → TOTP** doit être activé
+   (enrôlement et vérification). Chacun l'active ensuite depuis **Réglages**. La base impose le
+   second facteur (politiques restrictives `*_mfa`, migration `20261109000000_mfa.sql`) : un compte
+   qui l'a activé n'accède à rien avec son seul mot de passe, même par l'API. Code perdu :
+   l'administrateur supprime le facteur dans **Authentication → Users → (compte) → MFA factors**.
 
 ## 2. Services externes
 

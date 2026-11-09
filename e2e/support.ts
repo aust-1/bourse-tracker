@@ -21,6 +21,11 @@ export async function resetData() {
   await admin.from('instruments').delete().not('id', 'is', null);
 
   const userId = await ensureUser(admin, TEST_EMAIL, TEST_PASSWORD);
+  // pas de double authentification laissée par un parcours précédent
+  const factors = await admin.auth.admin.mfa.listFactors({ userId });
+  for (const f of factors.data?.factors ?? []) {
+    await admin.auth.admin.mfa.deleteFactor({ userId, id: f.id });
+  }
   const inst = await admin.from('instruments').insert(CW8).select('id').single();
   if (inst.error) throw inst.error;
   // l'utilisateur ne voit que les instruments qu'il suit
