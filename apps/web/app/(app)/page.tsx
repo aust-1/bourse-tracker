@@ -1,5 +1,7 @@
+import { summarizeCash } from '@bourse/core';
 import { LiveDashboard } from '@/components/live-dashboard';
 import { Sparkline } from '@/components/sparkline';
+import { loadCash } from '@/lib/cash';
 import { buildHistory, loadCloses } from '@/lib/history';
 import { portfolioScope } from '@/lib/portfolios';
 import { loadPortfolioData } from '@/lib/queries';
@@ -11,7 +13,12 @@ export const dynamic = 'force-dynamic';
 export default async function Dashboard() {
   const supabase = await createClient();
   const { selected } = await portfolioScope(supabase);
-  const { orders, instruments, quotes } = await loadPortfolioData(supabase, selected?.id ?? null);
+  const [{ orders, instruments, quotes }, movements] = await Promise.all([
+    loadPortfolioData(supabase, selected?.id ?? null),
+    loadCash(supabase, selected?.id ?? null).catch(() => []),
+  ]);
+  // liquidités affichées dès qu'un mouvement est enregistré
+  const cash = movements.length > 0 ? summarizeCash(orders, movements) : null;
 
   // mini-courbe : 30 dernières séances (échec de lecture : le tableau de bord reste utilisable)
   let trend: number[];
@@ -44,7 +51,12 @@ export default async function Dashboard() {
           </Link>
         )}
       </div>
-      <LiveDashboard orders={orders} instruments={instruments} initialQuotes={quotes} />
+      <LiveDashboard
+        orders={orders}
+        instruments={instruments}
+        initialQuotes={quotes}
+        cash={cash ? { balance: cash.balance, deposits: cash.deposits } : null}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ const links = [
   { href: '/orders', label: 'Ordres' },
   { href: '/alerts', label: 'Alertes' },
   { href: '/history', label: 'Historique' },
+  { href: '/cash', label: 'Mouvements' },
   { href: '/portfolios', label: 'Portefeuilles' },
   { href: '/settings', label: 'Réglages' },
 ];

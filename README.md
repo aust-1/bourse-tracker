@@ -11,6 +11,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
 - **Portefeuilles** : plusieurs enveloppes par compte (PEA, PEA-PME, compte-titres) ; chaque ordre
   appartient à un portefeuille, la vente à découvert est contrôlée portefeuille par portefeuille et un
   sélecteur filtre tous les écrans.
+- **Mouvements** : versements, retraits, dividendes et frais ; solde de liquidités, valeur totale
+  (titres + liquidités) et jauges des plafonds de versements (PEA 150 000 €, PEA + PEA-PME 225 000 €).
 - **Tableau de bord en direct** : valeur, variation du jour (tient compte des ordres passés dans la journée),
   gain latent et réalisé, PRU (méthode du prix moyen pondéré), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.

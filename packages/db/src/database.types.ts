@@ -107,6 +107,57 @@ export type Database = {
           },
         ];
       };
+      cash_movements: {
+        Row: {
+          amount: number;
+          created_at: string;
+          id: string;
+          instrument_id: string | null;
+          kind: Database['public']['Enums']['cash_kind'];
+          note: string | null;
+          occurred_on: string;
+          portfolio_id: string;
+          user_id: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          id?: string;
+          instrument_id?: string | null;
+          kind: Database['public']['Enums']['cash_kind'];
+          note?: string | null;
+          occurred_on: string;
+          portfolio_id: string;
+          user_id?: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          id?: string;
+          instrument_id?: string | null;
+          kind?: Database['public']['Enums']['cash_kind'];
+          note?: string | null;
+          occurred_on?: string;
+          portfolio_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'cash_movements_instrument_id_fkey';
+            columns: ['instrument_id'];
+            isOneToOne: false;
+            referencedRelation: 'instruments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_movements_portfolio_fk';
+            columns: ['portfolio_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'portfolios';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
       instruments: {
         Row: {
           created_at: string;
@@ -474,6 +525,7 @@ export type Database = {
         | 'day_change_down'
         | 'position_pl_above'
         | 'position_pl_below';
+      cash_kind: 'deposit' | 'withdrawal' | 'dividend' | 'fee';
       order_side: 'buy' | 'sell';
       portfolio_kind: 'pea' | 'pea_pme' | 'cto';
     };
@@ -609,6 +661,7 @@ export const Constants = {
         'position_pl_above',
         'position_pl_below',
       ],
+      cash_kind: ['deposit', 'withdrawal', 'dividend', 'fee'],
       order_side: ['buy', 'sell'],
       portfolio_kind: ['pea', 'pea_pme', 'cto'],
     },
