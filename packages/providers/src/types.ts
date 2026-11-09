@@ -8,6 +8,8 @@ export interface Quote {
   currency: string;
   name: string | null;
   exchange: string | null;
+  /** Type d'actif, si la source le fournit */
+  type?: 'etf' | 'equity' | null;
 }
 
 export interface DailyClose {

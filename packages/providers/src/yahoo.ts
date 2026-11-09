@@ -117,6 +117,8 @@ export class YahooProvider implements PriceProvider {
             ? meta.shortName
             : null,
       exchange: typeof meta.exchangeName === 'string' ? meta.exchangeName : null,
+      type:
+        meta.instrumentType === 'ETF' ? 'etf' : meta.instrumentType === 'EQUITY' ? 'equity' : null,
     };
   }
 

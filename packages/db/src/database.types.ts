@@ -160,6 +160,7 @@ export type Database = {
       };
       instruments: {
         Row: {
+          asset_type: string | null;
           created_at: string;
           currency: string;
           exchange: string | null;
@@ -169,6 +170,7 @@ export type Database = {
           yahoo_symbol: string;
         };
         Insert: {
+          asset_type?: string | null;
           created_at?: string;
           currency?: string;
           exchange?: string | null;
@@ -178,6 +180,7 @@ export type Database = {
           yahoo_symbol: string;
         };
         Update: {
+          asset_type?: string | null;
           created_at?: string;
           currency?: string;
           exchange?: string | null;
@@ -589,7 +592,12 @@ export type Database = {
         Returns: number;
       };
       track_instrument: {
-        Args: { p_exchange?: string; p_name?: string; p_symbol: string };
+        Args: {
+          p_exchange?: string;
+          p_name?: string;
+          p_symbol: string;
+          p_type?: string;
+        };
         Returns: string;
       };
     };

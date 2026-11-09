@@ -30,6 +30,12 @@ export class MemoryStore implements Store {
     this.quotes.set(q.instrumentId, { ...q, fetchedAt: new Date() });
   }
 
+  assetTypes = new Map<string, 'etf' | 'equity'>();
+
+  async setAssetType(instrumentId: string, type: 'etf' | 'equity') {
+    if (!this.assetTypes.has(instrumentId)) this.assetTypes.set(instrumentId, type);
+  }
+
   async getPrevCloseFallback(instrumentId: string, beforeDate: string) {
     const rows = (this.closes.get(instrumentId) ?? []).filter((c) => c.date < beforeDate);
     return rows.length ? rows[rows.length - 1]!.close : null;

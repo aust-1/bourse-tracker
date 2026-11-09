@@ -31,6 +31,7 @@ export async function ensureInstrument(
     p_symbol: symbol,
     p_name: quote.name ?? symbol,
     p_exchange: quote.exchange ?? undefined,
+    p_type: quote.type ?? undefined,
   });
   if (created.error || !created.data) {
     return { error: created.error ? dbErrorMessage(created.error) : 'Instrument non enregistré.' };

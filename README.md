@@ -23,7 +23,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   L'administrateur peut changer le symbole Yahoo d'un titre sans rien perdre (fusion si le même ISIN
   est déjà suivi sous ce symbole).
 - **Tableau de bord en direct** : valeur, variation du jour (tient compte des ordres passés dans la journée),
-  gain latent et réalisé, PRU (méthode du prix moyen pondéré), mise à jour sans rechargement.
+  gain latent et réalisé, PRU (méthode du prix moyen pondéré), répartition par ligne et par type d'actif
+  (ETF, actions, liquidités), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.
 - **Alertes** : seuil de prix (≥ / ≤), variation du jour, gain ou perte sur la position. Elles partent une
   seule fois, puis se ré-arment d'un clic. Historique avec l'état d'envoi par canal.

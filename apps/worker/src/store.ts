@@ -4,6 +4,8 @@ export interface TrackedInstrument {
   id: string;
   symbol: string;
   name: string;
+  /** null tant que la source ne l'a pas fourni */
+  assetType?: 'etf' | 'equity' | null;
 }
 
 export interface StoredQuote {
@@ -38,6 +40,8 @@ export interface Store {
   listTrackedInstruments(): Promise<TrackedInstrument[]>;
   getQuotes(instrumentIds: readonly string[]): Promise<Map<string, StoredQuote>>;
   upsertQuote(q: Omit<StoredQuote, 'fetchedAt'>): Promise<void>;
+  /** Type d'actif fourni par la source (renseigné une seule fois). */
+  setAssetType(instrumentId: string, type: 'etf' | 'equity'): Promise<void>;
   /** Dernière clôture journalière strictement avant `beforeDate` (YYYY-MM-DD). */
   getPrevCloseFallback(instrumentId: string, beforeDate: string): Promise<number | null>;
   /** Fin de cycle ; `failed` (cycles de cotation seulement) remplace la liste des échecs. */

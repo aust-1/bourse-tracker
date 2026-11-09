@@ -44,7 +44,7 @@ export async function loadPortfolioData(
       if (portfolioId) q = q.eq('portfolio_id', portfolioId);
       return q.order('executed_at').order('id').range(from, to);
     }),
-    supabase.from('instruments').select('id, yahoo_symbol, name, isin'),
+    supabase.from('instruments').select('id, yahoo_symbol, name, isin, asset_type'),
     loadQuotes(supabase),
     loadSplits(supabase),
   ]);
@@ -70,6 +70,7 @@ export async function loadPortfolioData(
       symbol: i.yahoo_symbol,
       name: i.name,
       isin: i.isin,
+      assetType: i.asset_type as 'etf' | 'equity' | null,
     })),
     quotes,
   };

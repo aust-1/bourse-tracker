@@ -55,11 +55,25 @@ export class SupabaseStore implements Store {
     const rows = must(
       await this.db
         .from('instruments')
-        .select('id, yahoo_symbol, name')
+        .select('id, yahoo_symbol, name, asset_type')
         .in('id', [...ids]),
       'lecture des instruments',
     );
-    return rows.map((r) => ({ id: r.id, symbol: r.yahoo_symbol, name: r.name }));
+    return rows.map((r) => ({
+      id: r.id,
+      symbol: r.yahoo_symbol,
+      name: r.name,
+      assetType: r.asset_type as TrackedInstrument['assetType'],
+    }));
+  }
+
+  async setAssetType(instrumentId: string, type: 'etf' | 'equity'): Promise<void> {
+    const { error } = await this.db
+      .from('instruments')
+      .update({ asset_type: type })
+      .eq('id', instrumentId)
+      .is('asset_type', null);
+    if (error) throw new Error(`type d'actif : ${error.message}`);
   }
 
   async getQuotes(ids: readonly string[]): Promise<Map<string, StoredQuote>> {

@@ -87,6 +87,7 @@ describe('YahooProvider', () => {
       prevClose: 698.18,
       currency: 'EUR',
       exchange: 'PAR',
+      type: 'etf',
     });
     expect(q.quotedAt.toISOString()).toBe(new Date(1790350528 * 1000).toISOString());
     expect(q.name).toContain('Amundi');

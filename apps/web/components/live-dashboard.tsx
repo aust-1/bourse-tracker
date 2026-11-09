@@ -11,8 +11,10 @@ import {
   type OrderRow,
   type QuoteRow,
 } from '@bourse/core';
+import { allocation } from '@/lib/allocation';
 import { loadQuotes, toQuoteRow } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/browser';
+import { AllocationBars } from './allocation-bars';
 import { Pl } from './pl';
 
 const POLL_MS = 15_000;
@@ -127,6 +129,19 @@ export function LiveDashboard(props: {
     () => buildPortfolioView(props.orders, props.instruments, quotes),
     [props.orders, props.instruments, quotes],
   );
+  const cashBalance = props.cash?.balance ?? null;
+  const split = useMemo(() => {
+    const types = new Map(props.instruments.map((i) => [i.id, i.assetType ?? null]));
+    return allocation(
+      rows.map((r) => ({
+        name: r.name,
+        marketValue: r.marketValue,
+        costBasis: r.costBasis,
+        assetType: types.get(r.instrumentId) ?? null,
+      })),
+      cashBalance,
+    );
+  }, [rows, props.instruments, cashBalance]);
 
   if (props.orders.length === 0) {
     return (
@@ -250,6 +265,13 @@ export function LiveDashboard(props: {
           </tbody>
         </table>
       </div>
+
+      {split.byLine.length > 0 && (
+        <section className="card grid gap-6 md:grid-cols-2" aria-label="Répartition">
+          <AllocationBars title="Par ligne" slices={split.byLine} />
+          <AllocationBars title="Par type d’actif" slices={split.byType} />
+        </section>
+      )}
 
       <p className="text-xs text-slate-500">
         {connected ? '● Connexion temps réel active' : '○ Rafraîchissement toutes les 15 s'}
