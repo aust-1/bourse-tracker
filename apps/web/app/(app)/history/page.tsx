@@ -4,7 +4,14 @@ import { LineChart } from '@/components/line-chart';
 import { Pl } from '@/components/pl';
 import { loadCash } from '@/lib/cash';
 import { eur } from '@/lib/format';
-import { buildHistory, isRangeKey, loadCloses, periodStats, RANGES } from '@/lib/history';
+import {
+  buildHistory,
+  isRangeKey,
+  loadCloses,
+  periodStats,
+  RANGES,
+  XIRR_MIN_DAYS,
+} from '@/lib/history';
 import { portfolioScope } from '@/lib/portfolios';
 import { loadPortfolioData } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/server';
@@ -69,7 +76,7 @@ export default async function HistoryPage({
         </p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <div className="card">
               <p className="text-xs text-slate-500">Valeur actuelle</p>
               <p className="mt-1 display tabular-nums">{eur(stats.end.marketValue)}</p>
@@ -85,11 +92,24 @@ export default async function HistoryPage({
               </p>
             </div>
             <div className="card">
-              <p className="text-xs text-slate-500">Rendement</p>
+              <p className="text-xs text-slate-500">Rendement (TWR)</p>
               <p className="mt-1 display">
-                <Pl value={stats.gainPct} kind="pct" />
+                <Pl value={stats.twrPct} kind="pct" />
               </p>
-              <p className="mt-1 text-xs text-slate-500">Base : valeur de départ + apports</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Pondéré par le temps : hors effet des apports
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-xs text-slate-500">TRI annualisé</p>
+              <p className="mt-1 display">
+                <Pl value={stats.xirrPct} kind="pct" />
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {stats.xirrPct === null
+                  ? `Sur une période d’au moins  jours`
+                  : 'Rendement par an de l’argent investi'}
+              </p>
             </div>
             <div className="card">
               <p className="text-xs text-slate-500">Apports nets</p>

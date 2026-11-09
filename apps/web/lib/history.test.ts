@@ -133,3 +133,31 @@ describe('incomeFlows', () => {
     ]);
   });
 });
+
+describe('periodStats : TWR et TRI', () => {
+  const snap = (date: string, marketValue: number, netContributions: number) => ({
+    date,
+    marketValue,
+    netContributions,
+    costBasis: netContributions,
+    realizedPl: 0,
+    income: 0,
+  });
+
+  it('TWR insensible à un apport ; TRI absent sur moins d’un an', () => {
+    const snaps = [
+      snap('2026-09-01', 1000, 1000),
+      snap('2026-09-02', 1100, 1000),
+      snap('2026-09-03', 11_100, 11_000),
+    ];
+    const s = periodStats(snaps, 'all', '2026-09-03')!;
+    expect(s.twrPct).toBeCloseTo(10, 9);
+    expect(s.gainPct).toBeCloseTo((100 / 11_000) * 100, 9);
+    expect(s.xirrPct).toBeNull();
+  });
+
+  it('TRI annualisé sur plus d’un an', () => {
+    const snaps = [snap('2025-01-01', 1000, 1000), snap('2026-01-01', 1100, 1000)];
+    expect(periodStats(snaps, 'all', '2026-01-01')!.xirrPct).toBeCloseTo(10, 3);
+  });
+});

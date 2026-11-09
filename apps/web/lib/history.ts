@@ -1,4 +1,4 @@
-import { buildSnapshots, parisDate, type Snapshot } from '@bourse/core';
+import { buildSnapshots, parisDate, periodCashFlows, twr, xirr, type Snapshot } from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CashMovement, IncomeFlow, OrderRow, QuoteRow } from '@bourse/core';
@@ -94,7 +94,14 @@ export interface PeriodStats {
   contributions: number;
   /** Revenus de la période : dividendes moins frais hors courtage (inclus dans le gain) */
   income: number;
+  /** Rendement pondéré par le temps (pourcents) : indépendant des apports */
+  twrPct: number | null;
+  /** TRI annualisé (pourcents) ; null sur moins d'un an (une annualisation serait trompeuse) */
+  xirrPct: number | null;
 }
+
+/** En deçà, un TRI annualisé extrapole trop une variation de court terme. */
+export const XIRR_MIN_DAYS = 365;
 
 function shiftMonths(day: string, months: number): string {
   const d = new Date(`${day}T12:00:00Z`);
@@ -143,7 +150,16 @@ export function periodStats(
     gainPct: capital > 0 ? (gain / capital) * 100 : null,
     contributions,
     income: end.income - (base ? base.income : 0),
+    twrPct: twr(points, base),
+    xirrPct:
+      spanDays((base ?? points[0]!).date, end.date) >= XIRR_MIN_DAYS
+        ? xirr(periodCashFlows(points, base))
+        : null,
   };
+}
+
+function spanDays(from: string, to: string): number {
+  return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
 }
 
 type Client = SupabaseClient<Database>;
