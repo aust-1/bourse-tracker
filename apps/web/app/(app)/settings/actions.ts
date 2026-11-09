@@ -1,6 +1,6 @@
 'use server';
 
-import { Notifier, type Channel } from '@bourse/providers';
+import { Notifier, ntfyHosts, type Channel } from '@bourse/providers';
 import { revalidatePath } from 'next/cache';
 import { dbErrorMessage } from '@/lib/orders';
 import { describeDelivery, parseSettingsForm } from '@/lib/settings';
@@ -55,6 +55,7 @@ export async function sendTest(channel: Channel): Promise<{ message: string }> {
     resendApiKey: process.env.RESEND_API_KEY || null,
     emailFrom: process.env.EMAIL_FROM || 'Bourse Tracker <onboarding@resend.dev>',
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || null,
+    ntfyHosts: ntfyHosts(process.env.NTFY_HOSTS),
   });
   const delivery = await notifier.notify(
     data

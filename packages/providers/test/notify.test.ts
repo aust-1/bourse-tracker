@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { allFailed, isDiscordWebhook, isNtfyUrl, Notifier } from '../src';
+import { allFailed, isDiscordWebhook, isNtfyUrl, Notifier, ntfyHosts } from '../src';
 
 const ok = () => new Response(null, { status: 204 });
 const settings = {
@@ -86,7 +86,10 @@ describe('Notifier', () => {
 describe('ntfy et Telegram', () => {
   it.each([
     ['https://ntfy.sh/mon-sujet_1', true],
-    ['https://ntfy.exemple.fr/alertes', true],
+    ['https://ntfy.exemple.fr/alertes', false], // serveur non autorisé par défaut
+    ['https://ntfy.sh:8443/sujet', false],
+    ['https://user:pw@ntfy.sh/sujet', false],
+    ['https://NTFY.SH./sujet', true],
     ['http://ntfy.sh/sujet', false],
     ['https://ntfy.sh/a/b', false],
     ['https://ntfy.sh/', false],
@@ -142,5 +145,42 @@ describe('ntfy et Telegram', () => {
         msg,
       ),
     ).toEqual({ telegram: 'not_configured', ntfy: 'not_configured' });
+  });
+});
+
+describe('ntfy : serveurs autorisés', () => {
+  it('ntfyHosts : ntfy.sh plus la liste de NTFY_HOSTS', () => {
+    expect(ntfyHosts(' ntfy.exemple.fr , Autre.org ')).toEqual([
+      'ntfy.sh',
+      'ntfy.exemple.fr',
+      'autre.org',
+    ]);
+    expect(ntfyHosts(undefined)).toEqual(['ntfy.sh']);
+  });
+
+  it('serveur auto-hébergé accepté une fois déclaré ; adresse interne refusée', () => {
+    const hosts = ntfyHosts('ntfy.exemple.fr');
+    expect(isNtfyUrl('https://ntfy.exemple.fr/alertes', hosts)).toBe(true);
+    expect(isNtfyUrl('https://10.0.0.5/alertes', hosts)).toBe(false);
+    expect(isNtfyUrl('https://localhost/alertes', hosts)).toBe(false);
+  });
+
+  it("serveur non autorisé : aucune requête n'est émise ; redirections refusées", async () => {
+    const fetch = vi.fn(async (_u: string | URL | Request, _i?: RequestInit) => ok());
+    const n = new Notifier({ resendApiKey: null, emailFrom: 'x', fetch });
+    const d = await n.notify(
+      { discordWebhookUrl: null, email: null, ntfyUrl: 'https://interne.local/x' },
+      ['ntfy'],
+      msg,
+    );
+    expect(d.ntfy).toMatch(/non autorisé/);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await n.notify(
+      { discordWebhookUrl: null, email: null, ntfyUrl: 'https://ntfy.sh/x' },
+      ['ntfy'],
+      msg,
+    );
+    expect(fetch.mock.calls[0]![1]!.redirect).toBe('manual');
   });
 });

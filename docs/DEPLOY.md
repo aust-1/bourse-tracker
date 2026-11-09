@@ -47,7 +47,7 @@ Dans le tableau de bord Supabase :
 | Discord         | Salon → Modifier → Intégrations → Webhooks → Nouveau → Copier l'URL (à coller dans **Réglages** du site)        | —                       |
 | Resend          | Créer un compte, générer une clé API                                                                            | `RESEND_API_KEY`        |
 | Healthchecks.io | Créer un check « worker » : période 1 min, délai de grâce 5 min ; ajouter ton email en canal                    | `HEALTHCHECKS_PING_URL` |
-| ntfy            | Rien côté serveur : chacun choisit un sujet (https://ntfy.sh/…) dans **Réglages** et l'ouvre dans l'app ntfy    | —                       |
+| ntfy            | Chacun choisit un sujet (https://ntfy.sh/…) dans **Réglages** ; serveur auto-hébergé : déclarer son nom d'hôte  | `NTFY_HOSTS`            |
 | Telegram        | Facultatif : créer un robot avec @BotFather, copier son jeton ; chacun saisit son identifiant dans **Réglages** | `TELEGRAM_BOT_TOKEN`    |
 
 Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte Resend : les alertes par email ne

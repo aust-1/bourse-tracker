@@ -5,6 +5,7 @@ import {
   EodhdProvider,
   FallbackProvider,
   Notifier,
+  ntfyHosts,
   YahooProvider,
   type Message,
   type PriceProvider,
@@ -32,6 +33,7 @@ const notifier = new Notifier({
   resendApiKey: config.resendApiKey,
   emailFrom: config.emailFrom,
   telegramBotToken: config.telegramBotToken,
+  ntfyHosts: ntfyHosts(process.env.NTFY_HOSTS),
 });
 
 /** Message système (panne de la source de prix…) : envoyé aux administrateurs, sur tous leurs canaux. */

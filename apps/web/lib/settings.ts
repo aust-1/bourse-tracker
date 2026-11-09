@@ -1,4 +1,4 @@
-import { isDiscordWebhook, isNtfyUrl, isTelegramChatId } from '@bourse/providers';
+import { isDiscordWebhook, isNtfyUrl, isTelegramChatId, ntfyHosts } from '@bourse/providers';
 import { z } from 'zod';
 
 /** Le résumé part à partir de l'heure choisie ; le worker travaille jusqu'à 23 h. */
@@ -58,7 +58,11 @@ export const settingsSchema = z.object({
   ntfyUrl: z
     .string()
     .transform(blankToNull)
-    .refine((v) => v === null || isNtfyUrl(v), 'Sujet ntfy invalide (https://ntfy.sh/mon-sujet)'),
+    .refine(
+      // serveurs autorisés : ntfy.sh et ceux de NTFY_HOSTS (validation côté serveur)
+      (v) => v === null || isNtfyUrl(v, ntfyHosts(process.env.NTFY_HOSTS)),
+      'Sujet ntfy invalide ou serveur non autorisé (https://ntfy.sh/mon-sujet)',
+    ),
   telegramChatId: z
     .string()
     .transform(blankToNull)

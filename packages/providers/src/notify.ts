@@ -36,11 +36,40 @@ export function isDiscordWebhook(raw: string): boolean {
   }
 }
 
-/** Sujet ntfy : https, un seul segment de chemin (le nom du sujet). */
-export function isNtfyUrl(raw: string): boolean {
+/** Serveur ntfy public, toujours autorisé. */
+export const DEFAULT_NTFY_HOSTS = ['ntfy.sh'] as const;
+
+/**
+ * Serveurs ntfy autorisés : ntfy.sh et ceux déclarés par l'administrateur (`NTFY_HOSTS`, séparés
+ * par des virgules). La liste fermée empêche un compte de faire envoyer des requêtes par le
+ * serveur vers une adresse de son choix (service interne, réseau privé…).
+ */
+export function ntfyHosts(env: string | undefined | null): string[] {
+  const extra = (env ?? '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  return [...new Set([...DEFAULT_NTFY_HOSTS, ...extra])];
+}
+
+/** Sujet ntfy : https, serveur autorisé, port par défaut, un seul segment de chemin. */
+export function isNtfyUrl(
+  raw: string,
+  allowedHosts: readonly string[] = DEFAULT_NTFY_HOSTS,
+): boolean {
   try {
     const u = new URL(raw);
-    return u.protocol === 'https:' && /^\/[A-Za-z0-9_-]{1,64}$/.test(u.pathname) && !u.search;
+    const host = u.hostname.toLowerCase().replace(/\.$/, '');
+    return (
+      u.protocol === 'https:' &&
+      allowedHosts.includes(host) &&
+      !u.port &&
+      !u.username &&
+      !u.password &&
+      /^\/[A-Za-z0-9_-]{1,64}$/.test(u.pathname) &&
+      !u.search &&
+      !u.hash
+    );
   } catch {
     return false;
   }
@@ -56,6 +85,8 @@ export interface NotifierConfig {
   emailFrom: string;
   /** Robot Telegram de l'instance (BotFather) ; null : canal indisponible */
   telegramBotToken?: string | null;
+  /** Serveurs ntfy autorisés (défaut : ntfy.sh) ; voir `ntfyHosts` */
+  ntfyHosts?: readonly string[];
   fetch?: typeof fetch;
 }
 
@@ -106,11 +137,15 @@ export class Notifier {
   }
 
   async sendNtfy(topicUrl: string, msg: Message): Promise<void> {
-    if (!isNtfyUrl(topicUrl)) throw new Error('URL ntfy invalide');
+    if (!isNtfyUrl(topicUrl, this.cfg.ntfyHosts ?? DEFAULT_NTFY_HOSTS)) {
+      throw new Error('URL ntfy invalide ou serveur non autorisé');
+    }
     const u = new URL(topicUrl);
     // publication JSON : titre et texte en UTF-8 (un en-tête HTTP ne porte pas les accents)
     const res = await this.fetchImpl(`${u.origin}/`, {
       method: 'POST',
+      // une redirection pourrait mener hors des serveurs autorisés
+      redirect: 'manual',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic: u.pathname.slice(1),
