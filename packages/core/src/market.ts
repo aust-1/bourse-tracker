@@ -65,30 +65,94 @@ export function parisDayStart(date: string): Date {
   return new Date(start);
 }
 
-const isWeekday = (at: Date) => !['Sat', 'Sun'].includes(parts(at).weekday);
-
 const OPEN = 9 * 60;
 const CLOSE = 17 * 60 + 30;
+/** Séances raccourcies d'Euronext (24 et 31 décembre) : clôture à 14:05. */
+const EARLY_CLOSE = 14 * 60 + 5;
 
-/** Séance continue Euronext / Xetra : lun-ven 09:00-17:30 Paris (jours fériés non gérés). */
-export function isMarketOpen(at: Date): boolean {
-  const m = parisMinutes(at);
-  return isWeekday(at) && m >= OPEN && m < CLOSE;
+/** Dimanche de Pâques (calendrier grégorien, algorithme de Meeus/Jones/Butcher), YYYY-MM-DD. */
+export function easterSunday(year: number): string {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/** Fenêtre de polling du worker : lun-ven 08:55-17:40 Paris. */
-export function isPollingWindow(at: Date): boolean {
-  const m = parisMinutes(at);
-  return isWeekday(at) && m >= OPEN - 5 && m <= CLOSE + 10;
+function shiftDay(day: string, days: number): string {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 /**
- * Fenêtre de travail du worker : lun-ven 08:55-23:00 Paris. Les cotes ne sont récupérées
+ * Jours fériés d'Euronext (Paris, Amsterdam, Bruxelles, Lisbonne, Milan, Dublin) : 1er janvier,
+ * Vendredi saint, lundi de Pâques, 1er mai, 25 et 26 décembre.
+ */
+export function euronextHolidays(year: number): string[] {
+  const easter = easterSunday(year);
+  return [
+    `${year}-01-01`,
+    shiftDay(easter, -2),
+    shiftDay(easter, 1),
+    `${year}-05-01`,
+    `${year}-12-25`,
+    `${year}-12-26`,
+  ];
+}
+
+const holidayCache = new Map<number, Set<string>>();
+
+/** Jour de bourse : du lundi au vendredi, hors jours fériés d'Euronext. `day` = YYYY-MM-DD. */
+export function isTradingDay(day: string): boolean {
+  const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
+  if (weekday === 0 || weekday === 6) return false;
+  const year = Number(day.slice(0, 4));
+  let holidays = holidayCache.get(year);
+  if (!holidays) {
+    holidays = new Set(euronextHolidays(year));
+    holidayCache.set(year, holidays);
+  }
+  return !holidays.has(day);
+}
+
+/** Heure de clôture (minutes depuis minuit, Paris) de la séance du jour `day`. */
+export function closeMinutes(day: string): number {
+  const md = day.slice(5);
+  return md === '12-24' || md === '12-31' ? EARLY_CLOSE : CLOSE;
+}
+
+/** Séance continue Euronext : jours de bourse 09:00-17:30 Paris (14:05 les 24 et 31 décembre). */
+export function isMarketOpen(at: Date): boolean {
+  const day = parisDate(at);
+  const m = parisMinutes(at);
+  return isTradingDay(day) && m >= OPEN && m < closeMinutes(day);
+}
+
+/** Fenêtre de polling du worker : jours de bourse, de 08:55 à la clôture + 10 min (Paris). */
+export function isPollingWindow(at: Date): boolean {
+  const day = parisDate(at);
+  const m = parisMinutes(at);
+  return isTradingDay(day) && m >= OPEN - 5 && m <= closeMinutes(day) + 10;
+}
+
+/**
+ * Fenêtre de travail du worker : jours de bourse 08:55-23:00 Paris. Les cotes ne sont récupérées
  * que dans la fenêtre de polling ; le reste sert au résumé du soir et à l'historique.
  */
 export function isWorkWindow(at: Date): boolean {
   const m = parisMinutes(at);
-  return isWeekday(at) && m >= OPEN - 5 && m < 23 * 60;
+  return isTradingDay(parisDate(at)) && m >= OPEN - 5 && m < 23 * 60;
 }
 
 /** Convertit une saisie `YYYY-MM-DDTHH:mm` (heure de Paris) en instant UTC. */
