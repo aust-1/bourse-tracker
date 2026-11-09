@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { CopyLink, InvitationForm } from '@/components/invitation-form';
 import { dateTime } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
-import { revokeInvitation } from './actions';
+import { revokeInvitation, setAccountDisabled } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,18 +20,69 @@ export default async function InvitationsPage() {
   const { data: isAdmin } = await supabase.rpc('is_admin');
   if (!isAdmin) notFound();
 
-  const [{ data: invitations }, origin] = await Promise.all([
+  const [{ data: invitations }, { data: accounts }, { data: me }, origin] = await Promise.all([
     supabase
       .from('invitations')
       .select('id, code, note, created_at, expires_at, used_email, used_at')
       .order('created_at', { ascending: false }),
+    supabase.rpc('admin_list_accounts'),
+    supabase.auth.getUser(),
     siteOrigin(),
   ]);
   const now = Date.now();
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Invitations</h1>
+      <h1 className="text-2xl font-semibold">Comptes</h1>
+      <section className="card overflow-x-auto p-0">
+        <table className="w-full">
+          <thead className="border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th className="th">Compte</th>
+              <th className="th">Dernière connexion</th>
+              <th className="th text-right">Ordres</th>
+              <th className="th">État</th>
+              <th className="th" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {accounts?.map((a) => (
+              <tr key={a.user_id}>
+                <td className="td">
+                  {a.email}
+                  <div className="text-xs text-slate-500">
+                    {a.is_admin ? 'administrateur · ' : ''}
+                    {a.has_mfa ? 'double authentification · ' : ''}
+                    créé le {dateTime(a.created_at)}
+                  </div>
+                </td>
+                <td className="td whitespace-nowrap">
+                  {a.last_sign_in_at ? dateTime(a.last_sign_in_at) : '—'}
+                </td>
+                <td className="td text-right tabular-nums">{a.orders_count}</td>
+                <td className="td">
+                  {a.disabled_at ? (
+                    <span className="text-red-600">Désactivé</span>
+                  ) : (
+                    <span className="text-emerald-600 dark:text-emerald-400">Actif</span>
+                  )}
+                </td>
+                <td className="td text-right">
+                  {a.user_id !== me.user?.id && (
+                    <form action={setAccountDisabled.bind(null, a.user_id, !a.disabled_at)}>
+                      <button className="text-sm underline">
+                        {a.disabled_at ? 'Réactiver' : 'Désactiver'}
+                      </button>
+                    </form>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <h2 className="text-lg font-semibold">Invitations</h2>
       <p className="text-sm text-slate-600 dark:text-slate-400">
         Chaque lien crée un seul compte et expire au bout de 7 jours. Les comptes invités ont leurs
         propres ordres, alertes et réglages : ils ne voient rien des tiens.

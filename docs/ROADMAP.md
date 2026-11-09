@@ -8,7 +8,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 - [x] **18 — Mot de passe oublié** : demande de lien par email, page de nouveau mot de passe.
 - [x] **19 — Double authentification (TOTP)** : activation depuis les réglages, code demandé à la
       connexion (niveau `aal2` exigé dès qu'un facteur est enrôlé).
-- [ ] **20 — Gestion des comptes** : export de toutes ses données (JSON), suppression de son compte ;
+- [x] **20 — Gestion des comptes** : export de toutes ses données (JSON), suppression de son compte ;
       pour l'administrateur, liste des comptes et désactivation / réactivation.
 - [ ] **21 — Page de supervision (administrateur)** : dernier cycle du worker, dernière erreur,
       instruments sans cote ou à cote ancienne, retard observé.

@@ -13,7 +13,7 @@ const links = [
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: isAdmin } = await supabase.rpc('is_admin');
-  const nav = isAdmin ? [...links, { href: '/invitations', label: 'Invitations' }] : links;
+  const nav = isAdmin ? [...links, { href: '/invitations', label: 'Comptes' }] : links;
   return (
     <div className="mx-auto max-w-6xl pb-16">
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-phosphor px-4 py-2 font-semibold text-tube">

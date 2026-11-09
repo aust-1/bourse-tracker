@@ -4,9 +4,9 @@ import { LoginForm } from '@/components/login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; deleted?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, deleted } = await searchParams;
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
       <h1>
@@ -16,6 +16,11 @@ export default async function LoginPage({
       {error === 'link' && (
         <p role="alert" className="text-sm text-red-600">
           Ce lien est invalide ou a expiré. Demande-en un nouveau.
+        </p>
+      )}
+      {deleted && (
+        <p role="status" className="text-sm">
+          Ton compte et toutes ses données ont été supprimés.
         </p>
       )}
       <LoginForm />

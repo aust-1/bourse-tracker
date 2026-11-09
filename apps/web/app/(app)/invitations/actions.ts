@@ -28,3 +28,10 @@ export async function revokeInvitation(id: string) {
   await supabase.from('invitations').delete().eq('id', id);
   revalidatePath('/invitations');
 }
+
+/** Désactive (connexion refusée, sessions fermées, plus d'alertes) ou réactive un compte. */
+export async function setAccountDisabled(userId: string, disabled: boolean) {
+  const supabase = await createClient();
+  await supabase.rpc('admin_set_disabled', { p_user: userId, p_disabled: disabled });
+  revalidatePath('/invitations');
+}

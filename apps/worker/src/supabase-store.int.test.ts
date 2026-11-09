@@ -268,6 +268,33 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     }
   });
 
+  it('compte désactivé : ni alertes, ni résumé, ni messages système', async () => {
+    const store = new SupabaseStore(db);
+    await db.from('settings').delete().not('user_id', 'is', null);
+    await db.from('settings').insert({ user_id: userId, email: 'int@example.com' });
+    const alert = await db
+      .from('alerts')
+      .insert({ user_id: userId, instrument_id: instrumentId, type: 'price_above', threshold: 1 })
+      .select('id')
+      .single();
+    const before = await db.from('profiles').select('is_admin').eq('user_id', userId).single();
+    try {
+      await db
+        .from('profiles')
+        .update({ is_admin: true, disabled_at: new Date().toISOString() })
+        .eq('user_id', userId);
+      expect((await store.listActiveAlerts()).map((a) => a.id)).not.toContain(alert.data!.id);
+      expect((await store.listSettings()).map((s) => s.userId)).not.toContain(userId);
+      expect(await store.listAdminSettings()).toEqual([]);
+    } finally {
+      await db
+        .from('profiles')
+        .update({ is_admin: before.data!.is_admin, disabled_at: null })
+        .eq('user_id', userId);
+      await db.from('alerts').delete().eq('id', alert.data!.id);
+    }
+  });
+
   it('pagination : plus de 1 000 ordres ne sont jamais tronqués', async () => {
     const store = new SupabaseStore(db);
     await db.from('orders').delete().not('id', 'is', null);

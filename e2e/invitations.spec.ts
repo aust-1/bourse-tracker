@@ -14,7 +14,7 @@ test("invitation : l'administrateur crée un lien, l'invité s'inscrit et ne voi
   await admin.from('invitations').delete().not('id', 'is', null);
 
   await login(page);
-  await page.getByRole('link', { name: 'Invitations' }).click();
+  await page.getByRole('link', { name: 'Comptes' }).click();
   await page.getByLabel('Pour qui ? (facultatif)').fill('Camille');
   await page.getByRole('button', { name: 'Créer un lien d’invitation' }).click();
   await expect(page.getByText('En attente')).toBeVisible();
@@ -30,7 +30,7 @@ test("invitation : l'administrateur crée un lien, l'invité s'inscrit et ne voi
   await guest.waitForURL('/');
 
   // pas de menu d'administration, et aucun titre de l'administrateur
-  await expect(guest.getByRole('link', { name: 'Invitations' })).toHaveCount(0);
+  await expect(guest.getByRole('link', { name: 'Comptes' })).toHaveCount(0);
   await guest.goto('/orders');
   await expect(guest.getByRole('option', { name: new RegExp(CW8.name) })).toHaveCount(0);
   expect((await guest.goto('/invitations'))?.status()).toBe(404);

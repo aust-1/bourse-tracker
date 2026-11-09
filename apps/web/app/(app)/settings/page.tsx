@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AccountData } from '@/components/account-data';
 import { MfaSettings } from '@/components/mfa-settings';
 import { SettingsForm } from '@/components/settings-form';
 import { createClient } from '@/lib/supabase/server';
@@ -27,6 +28,7 @@ export default async function SettingsPage() {
         }}
       />
       <MfaSettings />
+      <AccountData />
     </div>
   );
 }

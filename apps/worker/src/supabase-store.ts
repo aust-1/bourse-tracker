@@ -23,6 +23,15 @@ export function must<T>(
 export class SupabaseStore implements Store {
   constructor(readonly db: Db) {}
 
+  /** Comptes désactivés par l'administrateur : ni alertes, ni résumés, ni messages système. */
+  private async disabledUsers(): Promise<Set<string>> {
+    const rows = must(
+      await this.db.from('profiles').select('user_id').not('disabled_at', 'is', null),
+      'lecture des comptes désactivés',
+    );
+    return new Set(rows.map((r) => r.user_id));
+  }
+
   async listTrackedInstruments(): Promise<TrackedInstrument[]> {
     const [orders, alerts] = await Promise.all([
       // paginé : au-delà de 1 000 ordres, une lecture simple ignorerait des instruments
@@ -159,14 +168,17 @@ export class SupabaseStore implements Store {
         .eq('status', 'active'),
       'lecture des alertes actives',
     );
-    return rows.map((r) => ({
-      id: r.id,
-      userId: r.user_id,
-      instrumentId: r.instrument_id,
-      type: r.type,
-      threshold: r.threshold,
-      channels: r.channels,
-    }));
+    const disabled = await this.disabledUsers();
+    return rows
+      .filter((r) => !disabled.has(r.user_id))
+      .map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        instrumentId: r.instrument_id,
+        type: r.type,
+        threshold: r.threshold,
+        channels: r.channels,
+      }));
   }
 
   async getOrders(userId: string, instrumentId: string): Promise<Order[]> {
@@ -299,12 +311,13 @@ export class SupabaseStore implements Store {
 
   async listSettings(): Promise<UserSettings[]> {
     const rows = must(await this.db.from('settings').select('*'), 'lecture des réglages');
-    return rows.map((r) => this.toSettings(r));
+    const disabled = await this.disabledUsers();
+    return rows.filter((r) => !disabled.has(r.user_id)).map((r) => this.toSettings(r));
   }
 
   async listAdminSettings(): Promise<UserSettings[]> {
     const admins = must(
-      await this.db.from('profiles').select('user_id').eq('is_admin', true),
+      await this.db.from('profiles').select('user_id').eq('is_admin', true).is('disabled_at', null),
       'lecture des administrateurs',
     );
     if (admins.length === 0) return [];

@@ -19,7 +19,11 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
 - **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
   Healthchecks.io du worker.
 - **Comptes** : le premier compte est administrateur et crée des liens d'invitation (un compte par lien,
-  7 jours). La base refuse toute inscription sans invitation valide.
+  7 jours). La base refuse toute inscription sans invitation valide. L'administrateur voit tous les
+  comptes et peut en désactiver un (connexion refusée, plus d'alertes ni de résumé).
+- **Sécurité** : mot de passe oublié (lien par email), double authentification TOTP imposée par la base
+  (un compte qui l'a activée n'accède à rien avec son seul mot de passe), export de ses données en JSON
+  et suppression de son compte.
 
 ## Architecture
 

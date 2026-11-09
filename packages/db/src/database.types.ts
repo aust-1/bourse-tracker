@@ -249,18 +249,21 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string;
+          disabled_at: string | null;
           invited_by: string | null;
           is_admin: boolean;
           user_id: string;
         };
         Insert: {
           created_at?: string;
+          disabled_at?: string | null;
           invited_by?: string | null;
           is_admin?: boolean;
           user_id: string;
         };
         Update: {
           created_at?: string;
+          disabled_at?: string | null;
           invited_by?: string | null;
           is_admin?: boolean;
           user_id?: string;
@@ -376,10 +379,29 @@ export type Database = {
     };
     Functions: {
       aal_ok: { Args: never; Returns: boolean };
+      access_ok: { Args: never; Returns: boolean };
+      admin_list_accounts: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          disabled_at: string;
+          email: string;
+          has_mfa: boolean;
+          is_admin: boolean;
+          last_sign_in_at: string;
+          orders_count: number;
+          user_id: string;
+        }[];
+      };
+      admin_set_disabled: {
+        Args: { p_disabled: boolean; p_user: string };
+        Returns: undefined;
+      };
       assert_no_oversell: {
         Args: { p_instrument: string; p_user: string };
         Returns: undefined;
       };
+      delete_my_account: { Args: never; Returns: undefined };
       invitation_is_valid: { Args: { p_code: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };
       track_instrument: {
