@@ -68,8 +68,11 @@ export type Database = {
           channels: string[];
           created_at: string;
           id: string;
-          instrument_id: string;
+          instrument_id: string | null;
           last_triggered_at: string | null;
+          note: string | null;
+          rearm_minutes: number | null;
+          reference_value: number | null;
           status: Database['public']['Enums']['alert_status'];
           threshold: number;
           type: Database['public']['Enums']['alert_type'];
@@ -79,8 +82,11 @@ export type Database = {
           channels?: string[];
           created_at?: string;
           id?: string;
-          instrument_id: string;
+          instrument_id?: string | null;
           last_triggered_at?: string | null;
+          note?: string | null;
+          rearm_minutes?: number | null;
+          reference_value?: number | null;
           status?: Database['public']['Enums']['alert_status'];
           threshold: number;
           type: Database['public']['Enums']['alert_type'];
@@ -90,8 +96,11 @@ export type Database = {
           channels?: string[];
           created_at?: string;
           id?: string;
-          instrument_id?: string;
+          instrument_id?: string | null;
           last_triggered_at?: string | null;
+          note?: string | null;
+          rearm_minutes?: number | null;
+          reference_value?: number | null;
           status?: Database['public']['Enums']['alert_status'];
           threshold?: number;
           type?: Database['public']['Enums']['alert_type'];
@@ -609,7 +618,12 @@ export type Database = {
         | 'day_change_up'
         | 'day_change_down'
         | 'position_pl_above'
-        | 'position_pl_below';
+        | 'position_pl_below'
+        | 'drawdown_from_high'
+        | 'portfolio_value_above'
+        | 'portfolio_value_below'
+        | 'portfolio_day_change_up'
+        | 'portfolio_day_change_down';
       cash_kind: 'deposit' | 'withdrawal' | 'dividend' | 'fee';
       order_side: 'buy' | 'sell';
       portfolio_kind: 'pea' | 'pea_pme' | 'cto';
@@ -745,6 +759,11 @@ export const Constants = {
         'day_change_down',
         'position_pl_above',
         'position_pl_below',
+        'drawdown_from_high',
+        'portfolio_value_above',
+        'portfolio_value_below',
+        'portfolio_day_change_up',
+        'portfolio_day_change_down',
       ],
       cash_kind: ['deposit', 'withdrawal', 'dividend', 'fee'],
       order_side: ['buy', 'sell'],

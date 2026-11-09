@@ -49,7 +49,10 @@ export class SupabaseStore implements Store {
     ]);
     const ids = new Set([
       ...orders.map((o) => o.instrument_id),
-      ...must(alerts, 'lecture des alertes').map((a) => a.instrument_id),
+      // les alertes de portefeuille n'ont pas d'instrument
+      ...must(alerts, 'lecture des alertes').flatMap((a) =>
+        a.instrument_id ? [a.instrument_id] : [],
+      ),
     ]);
     if (ids.size === 0) return [];
     const rows = must(
@@ -186,14 +189,17 @@ export class SupabaseStore implements Store {
     }
   }
 
-  async listActiveAlerts(): Promise<AlertRow[]> {
-    const rows = must(
-      await this.db
-        .from('alerts')
-        .select('id, user_id, instrument_id, type, threshold, channels')
-        .eq('status', 'active'),
-      'lecture des alertes actives',
-    );
+  private async alertsWith(filter: 'active' | 'rearmable', what: string): Promise<AlertRow[]> {
+    let q = this.db
+      .from('alerts')
+      .select(
+        'id, user_id, instrument_id, type, threshold, channels, note, rearm_minutes, reference_value, last_triggered_at',
+      );
+    q =
+      filter === 'active'
+        ? q.eq('status', 'active')
+        : q.eq('status', 'triggered').not('rearm_minutes', 'is', null);
+    const rows = must(await q, what);
     const disabled = await this.disabledUsers();
     return rows
       .filter((r) => !disabled.has(r.user_id))
@@ -204,7 +210,36 @@ export class SupabaseStore implements Store {
         type: r.type,
         threshold: r.threshold,
         channels: r.channels,
+        note: r.note,
+        rearmMinutes: r.rearm_minutes,
+        referenceValue: r.reference_value,
+        lastTriggeredAt: r.last_triggered_at,
       }));
+  }
+
+  listActiveAlerts(): Promise<AlertRow[]> {
+    return this.alertsWith('active', 'lecture des alertes actives');
+  }
+
+  listRearmableAlerts(): Promise<AlertRow[]> {
+    return this.alertsWith('rearmable', 'lecture des alertes à réarmer');
+  }
+
+  async rearmAlert(alertId: string): Promise<void> {
+    const { error } = await this.db
+      .from('alerts')
+      .update({ status: 'active', reference_value: null })
+      .eq('id', alertId)
+      .eq('status', 'triggered');
+    if (error) throw new Error(`réarmement de l'alerte : ${error.message}`);
+  }
+
+  async updateAlertReference(alertId: string, value: number): Promise<void> {
+    const { error } = await this.db
+      .from('alerts')
+      .update({ reference_value: value })
+      .eq('id', alertId);
+    if (error) throw new Error(`plus haut de l'alerte : ${error.message}`);
   }
 
   async getOrders(userId: string, instrumentId: string): Promise<Order[]> {
@@ -337,7 +372,7 @@ export class SupabaseStore implements Store {
             {
               type: r.alerts.type,
               threshold: r.alerts.threshold,
-              instrumentName: r.alerts.instruments?.name ?? '?',
+              instrumentName: r.alerts.instruments?.name ?? 'Portefeuille',
               value: r.value_at_trigger,
               triggeredAt: new Date(r.triggered_at),
             },

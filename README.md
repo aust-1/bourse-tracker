@@ -27,8 +27,10 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   gain latent et réalisé, PRU (méthode du prix moyen pondéré), répartition par ligne et par type d'actif
   (ETF, actions, liquidités), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.
-- **Alertes** : seuil de prix (≥ / ≤), variation du jour, gain ou perte sur la position. Elles partent une
-  seule fois, puis se ré-arment d'un clic. Historique avec l'état d'envoi par canal.
+- **Alertes** : seuil de prix (≥ / ≤), variation du jour, gain ou perte sur la position, baisse depuis le
+  plus haut, valeur ou variation du jour du portefeuille entier ; note libre. Elles partent une
+  seule fois, puis se ré-arment d'un clic, ou d'elles-mêmes après un délai choisi une fois la condition
+  levée. Historique avec l'état d'envoi par canal.
 - **Historique** : courbe de la valeur du portefeuille, gain **hors apports** (un achat n'est pas de la
   performance), dividendes compris, rendement pondéré par le temps (TWR) et TRI annualisé (XIRR, sur
   un an ou plus), sur 1 M, 3 M, depuis janvier, 1 A ou Tout ; comparaison en base 100 à un indice

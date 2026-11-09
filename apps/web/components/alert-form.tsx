@@ -1,10 +1,10 @@
 'use client';
 
-import type { AlertType } from '@bourse/core';
+import { isPortfolioAlert, type AlertType } from '@bourse/core';
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { createAlert, type AlertFormState } from '@/app/(app)/alerts/actions';
-import { ALERT_TYPES, alertTypeInfo } from '@/lib/alerts';
+import { ALERT_TYPES, alertTypeInfo, REARM_CHOICES } from '@/lib/alerts';
 import { InstrumentPicker } from './instrument-picker';
 
 export interface ChannelStatus {
@@ -31,10 +31,12 @@ export function AlertForm({
 
   return (
     <form action={action} className="card flex max-w-xl flex-col gap-4">
-      <div className="flex flex-col gap-1 text-sm">
-        Instrument
-        <InstrumentPicker defaultSymbol={defaultSymbol} defaultLabel={defaultLabel} />
-      </div>
+      {!isPortfolioAlert(type) && (
+        <div className="flex flex-col gap-1 text-sm">
+          Instrument
+          <InstrumentPicker defaultSymbol={defaultSymbol} defaultLabel={defaultLabel} />
+        </div>
+      )}
 
       <label className="flex flex-col gap-1 text-sm">
         Condition
@@ -59,6 +61,43 @@ export function AlertForm({
           inputMode="decimal"
           defaultValue={state.values?.magnitude}
           required
+          className="input"
+        />
+        {type === 'drawdown_from_high' && (
+          <span className="text-xs text-slate-500">
+            Le plus haut est suivi à partir de la création de l’alerte (cours de séance).
+          </span>
+        )}
+      </label>
+
+      <div className="flex flex-col gap-1 text-sm">
+        <label htmlFor="alert-rearm">Réarmer automatiquement</label>
+        <select
+          id="alert-rearm"
+          name="rearm"
+          key={state.values?.rearm ?? ''}
+          defaultValue={state.values?.rearm ?? ''}
+          aria-describedby="alert-rearm-hint"
+          className="input"
+        >
+          {REARM_CHOICES.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+        <span id="alert-rearm-hint" className="text-xs text-slate-500">
+          Une fois le délai écoulé, l’alerte se réarme dès que la condition n’est plus remplie.
+        </span>
+      </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Note (rappelée dans la notification)
+        <input
+          name="note"
+          defaultValue={state.values?.note}
+          maxLength={200}
+          placeholder="ex. renforcer si < 80 €"
           className="input"
         />
       </label>

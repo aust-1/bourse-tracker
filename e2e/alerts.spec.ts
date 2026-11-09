@@ -91,3 +91,20 @@ test('alertes : création, condition déjà vraie, pause, ré-armement, suppress
     .click();
   await expect(page.getByRole('row', { name: /cours ≥/ })).toHaveCount(0);
 });
+
+test('alerte de portefeuille : sans titre, note et réarmement automatique', async ({ page }) => {
+  await resetData();
+  await login(page);
+  await page.goto('/alerts/new');
+  await page.getByLabel('Condition').selectOption('portfolio_value_below');
+  await expect(page.getByLabel('Instrument')).toHaveCount(0);
+  await page.getByLabel(/Seuil/).fill('10 000');
+  await page.getByLabel('Réarmer automatiquement').selectOption('1440');
+  await page.getByLabel(/Note/).fill('revoir l’allocation');
+  await page.getByRole('button', { name: "Créer l'alerte" }).click();
+  await page.waitForURL('**/alerts');
+  const row = page.getByRole('row', { name: /Portefeuille/ });
+  await expect(row).toContainText('valeur du portefeuille');
+  await expect(row).toContainText('réarmement auto. après 1 j');
+  await expect(row).toContainText('revoir l’allocation');
+});

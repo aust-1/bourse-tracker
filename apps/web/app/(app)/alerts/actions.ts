@@ -25,16 +25,27 @@ export async function createAlert(
   if (!data) return { error, values: snapshot(formData) };
 
   const supabase = await createClient();
+  const common = {
+    type: data.type,
+    threshold: data.threshold,
+    channels: data.channels,
+    note: data.note,
+    rearm_minutes: data.rearmMinutes,
+  };
+
+  // alerte sur le portefeuille entier : aucun titre, rien à vérifier de plus
+  if (data.symbol === null) {
+    const res = await supabase.from('alerts').insert({ ...common, instrument_id: null });
+    if (res.error) return { error: dbErrorMessage(res.error), values: snapshot(formData) };
+    revalidatePath('/alerts');
+    redirect('/alerts');
+  }
+
   const inst = await ensureInstrument(supabase, data.symbol);
   if (!inst.id) return { error: inst.error, values: snapshot(formData) };
   const instrumentId = inst.id; // capturé : le rétrécissement de type ne traverse pas les callbacks
 
-  const res = await supabase.from('alerts').insert({
-    instrument_id: inst.id,
-    type: data.type,
-    threshold: data.threshold,
-    channels: data.channels,
-  });
+  const res = await supabase.from('alerts').insert({ ...common, instrument_id: inst.id });
   if (res.error) return { error: dbErrorMessage(res.error), values: snapshot(formData) };
 
   // la condition est-elle déjà vraie ? Elle partirait alors au prochain cycle en séance.

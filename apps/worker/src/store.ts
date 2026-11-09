@@ -19,10 +19,17 @@ export interface StoredQuote {
 export interface AlertRow {
   id: string;
   userId: string;
-  instrumentId: string;
+  /** null : alerte sur le portefeuille entier */
+  instrumentId: string | null;
   type: AlertType;
   threshold: number;
   channels: string[];
+  note?: string | null;
+  /** Délai avant réarmement automatique (null : réarmement manuel) */
+  rearmMinutes?: number | null;
+  /** Plus haut observé (baisse depuis le plus haut) */
+  referenceValue?: number | null;
+  lastTriggeredAt?: string | null;
 }
 
 export interface UserSettings {
@@ -56,6 +63,12 @@ export interface Store {
   ): Promise<void>;
 
   listActiveAlerts(): Promise<AlertRow[]>;
+  /** Alertes déclenchées à réarmement automatique (délai défini). */
+  listRearmableAlerts(): Promise<AlertRow[]>;
+  /** Repasse une alerte en `active` (plus haut de référence remis à zéro). */
+  rearmAlert(alertId: string): Promise<void>;
+  /** Nouveau plus haut observé pour une alerte de baisse depuis le plus haut. */
+  updateAlertReference(alertId: string, value: number): Promise<void>;
   /** Ordres d'un utilisateur sur un instrument (pour calculer le PRU). */
   getOrders(userId: string, instrumentId: string): Promise<Order[]>;
   /** Passe l'alerte de `active` à `triggered` ; false si une autre exécution l'a déjà prise. */

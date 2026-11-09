@@ -25,5 +25,15 @@ export function describeCondition(type: AlertType, threshold: number): string {
       return `gain sur ma position ≥ ${fmtPct(threshold)}`;
     case 'position_pl_below':
       return `gain sur ma position ≤ ${fmtPct(threshold)}`;
+    case 'drawdown_from_high':
+      return `baisse depuis le plus haut ≤ ${fmtPct(threshold)}`;
+    case 'portfolio_value_above':
+      return `valeur du portefeuille ≥ ${fmtEur(threshold)}`;
+    case 'portfolio_value_below':
+      return `valeur du portefeuille ≤ ${fmtEur(threshold)}`;
+    case 'portfolio_day_change_up':
+      return `variation du jour du portefeuille ≥ ${fmtPct(threshold)}`;
+    case 'portfolio_day_change_down':
+      return `variation du jour du portefeuille ≤ ${fmtPct(threshold)}`;
   }
 }

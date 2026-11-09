@@ -79,11 +79,29 @@ export class MemoryStore implements Store {
     return this.orders.filter((o) => o.userId === userId && o.instrumentId === instrumentId);
   }
 
-  async claimAlert(alertId: string) {
+  async claimAlert(alertId: string, at: Date = new Date()) {
     const a = this.alerts.find((x) => x.id === alertId);
     if (!a || a.status !== 'active') return false;
     a.status = 'triggered';
+    a.lastTriggeredAt = at.toISOString();
     return true;
+  }
+
+  async listRearmableAlerts() {
+    return this.alerts.filter((a) => a.status === 'triggered' && a.rearmMinutes != null);
+  }
+
+  async rearmAlert(alertId: string) {
+    const a = this.alerts.find((x) => x.id === alertId);
+    if (a && a.status === 'triggered') {
+      a.status = 'active';
+      a.referenceValue = null;
+    }
+  }
+
+  async updateAlertReference(alertId: string, value: number) {
+    const a = this.alerts.find((x) => x.id === alertId);
+    if (a) a.referenceValue = value;
   }
 
   async releaseAlert(alertId: string) {
