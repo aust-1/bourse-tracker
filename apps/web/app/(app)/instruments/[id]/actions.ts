@@ -1,5 +1,6 @@
 'use server';
 
+import { normalizeIsin } from '@bourse/core';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -41,4 +42,21 @@ export async function deleteSplit(instrumentId: string, splitId: string) {
   await supabase.from('splits').delete().eq('id', splitId);
   revalidatePath('/', 'layout');
   redirect(`/instruments/${instrumentId}`);
+}
+
+/** ISIN du titre : renseigné une fois par qui le suit, corrigé ensuite par l'administrateur. */
+export async function saveIsin(instrumentId: string, formData: FormData) {
+  const path = `/instruments/${instrumentId}`;
+  const isin = normalizeIsin(String(formData.get('isin') ?? ''));
+  if (!isin)
+    redirect(`${path}?error=${encodeURIComponent('ISIN invalide (12 caractères, clé fausse ?)')}`);
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('set_instrument_isin', {
+    p_instrument: instrumentId,
+    p_isin: isin,
+  });
+  if (error) redirect(`${path}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath('/', 'layout');
+  redirect(path);
 }

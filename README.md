@@ -17,6 +17,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   convertis en titres d'après la division (position, PRU, courbes, contrôle du découvert).
 - **Fiscalité du PEA** : ancienneté (date des 5 ans) et estimation de l'impôt d'un retrait total
   (prélèvements sociaux, plus l'impôt sur le revenu avant 5 ans ; taux réglables).
+- **ISIN et éligibilité** : ISIN saisi sur la fiche du titre (clé de contrôle vérifiée) ; un titre dont
+  l'émetteur est hors EEE est signalé « hors PEA » sur la fiche et sur le tableau de bord d'un PEA.
 - **Tableau de bord en direct** : valeur, variation du jour (tient compte des ordres passés dans la journée),
   gain latent et réalisé, PRU (méthode du prix moyen pondéré), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.

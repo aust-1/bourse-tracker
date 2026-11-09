@@ -7,6 +7,7 @@ export interface InstrumentRow {
   id: string;
   symbol: string;
   name: string;
+  isin?: string | null;
 }
 
 export interface OrderRow extends Order {

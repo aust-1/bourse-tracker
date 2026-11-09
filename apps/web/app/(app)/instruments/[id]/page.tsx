@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { InstrumentChart } from '@/components/instrument-chart';
 import { Pl } from '@/components/pl';
+import { IsinSection } from '@/components/isin-section';
 import { SplitsSection } from '@/components/splits-section';
 import { dateTime, eur, num } from '@/lib/format';
 import { portfolioScope } from '@/lib/portfolios';
@@ -26,7 +27,7 @@ export default async function InstrumentPage({
   const [inst, orders, quote, dividends, splitRows, { data: isAdmin }] = await Promise.all([
     supabase
       .from('instruments')
-      .select('id, yahoo_symbol, name, exchange')
+      .select('id, yahoo_symbol, name, exchange, isin')
       .eq('id', id)
       .maybeSingle(),
     fetchAll((from, to) => {
@@ -165,6 +166,11 @@ export default async function InstrumentPage({
           {error}
         </p>
       )}
+      <IsinSection
+        instrumentId={inst.data.id}
+        isin={inst.data.isin}
+        canEdit={!inst.data.isin || !!isAdmin}
+      />
       <SplitsSection
         instrumentId={inst.data.id}
         splits={splitRows.data ?? []}

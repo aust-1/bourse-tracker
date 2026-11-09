@@ -44,7 +44,7 @@ export async function loadPortfolioData(
       if (portfolioId) q = q.eq('portfolio_id', portfolioId);
       return q.order('executed_at').order('id').range(from, to);
     }),
-    supabase.from('instruments').select('id, yahoo_symbol, name'),
+    supabase.from('instruments').select('id, yahoo_symbol, name, isin'),
     loadQuotes(supabase),
     loadSplits(supabase),
   ]);
@@ -65,7 +65,12 @@ export async function loadPortfolioData(
       })),
       splits,
     ),
-    instruments: instruments.data.map((i) => ({ id: i.id, symbol: i.yahoo_symbol, name: i.name })),
+    instruments: instruments.data.map((i) => ({
+      id: i.id,
+      symbol: i.yahoo_symbol,
+      name: i.name,
+      isin: i.isin,
+    })),
     quotes,
   };
 }

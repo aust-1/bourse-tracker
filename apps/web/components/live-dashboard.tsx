@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { dateTime, eur, num } from '@/lib/format';
 import {
   buildPortfolioView,
+  peaEligibility,
   quoteFreshness,
   type InstrumentRow,
   type OrderRow,
@@ -54,6 +55,8 @@ export function LiveDashboard(props: {
   initialQuotes: QuoteRow[];
   /** Liquidités du périmètre affiché (null si aucun mouvement enregistré) */
   cash?: { balance: number; deposits: number; dividends: number } | null;
+  /** Portefeuille affiché de type PEA : signale les titres dont l'ISIN est hors EEE */
+  peaOnly?: boolean;
 }) {
   const [quotes, setQuotes] = useState(
     () => new Map(props.initialQuotes.map((q) => [q.instrumentId, q])),
@@ -113,6 +116,13 @@ export function LiveDashboard(props: {
     };
   }, []);
 
+  const outsideEea = useMemo(
+    () =>
+      new Set(
+        props.instruments.filter((i) => peaEligibility(i.isin) === 'outside_eea').map((i) => i.id),
+      ),
+    [props.instruments],
+  );
   const { rows, totals } = useMemo(
     () => buildPortfolioView(props.orders, props.instruments, quotes),
     [props.orders, props.instruments, quotes],
@@ -202,6 +212,14 @@ export function LiveDashboard(props: {
                   </Link>
                   <div className="text-xs text-slate-500">
                     {r.symbol}
+                    {props.peaOnly && outsideEea.has(r.instrumentId) && (
+                      <span
+                        className="ml-1 text-red-600"
+                        title="Émetteur hors EEE : non éligible au PEA"
+                      >
+                        ⚠ hors PEA
+                      </span>
+                    )}
                     {r.quote && now && (
                       <>
                         {' · '}

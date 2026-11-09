@@ -576,6 +576,10 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined };
       invitation_is_valid: { Args: { p_code: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };
+      set_instrument_isin: {
+        Args: { p_instrument: string; p_isin: string };
+        Returns: undefined;
+      };
       split_factor: {
         Args: { p_at: string; p_instrument: string };
         Returns: number;

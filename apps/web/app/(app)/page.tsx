@@ -12,7 +12,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
   const supabase = await createClient();
-  const { selected } = await portfolioScope(supabase);
+  const { portfolios, selected } = await portfolioScope(supabase);
+  // titres hors EEE signalés quand tout le périmètre affiché est en PEA / PEA-PME
+  const peaOnly = (selected ? [selected] : portfolios).every((p) => p.kind !== 'cto');
   const [{ orders, instruments, quotes }, movements] = await Promise.all([
     loadPortfolioData(supabase, selected?.id ?? null),
     loadCash(supabase, selected?.id ?? null).catch(() => []),
@@ -57,6 +59,7 @@ export default async function Dashboard() {
         orders={orders}
         instruments={instruments}
         initialQuotes={quotes}
+        peaOnly={peaOnly}
         cash={
           cash
             ? { balance: cash.balance, deposits: cash.deposits, dividends: cash.dividends }
