@@ -15,7 +15,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 ## 2. Hygiène et justesse de base
 
-- [ ] **25 — Nettoyage** : dossier parasite `Caddyfile;C` supprimé et ignoré.
+- [x] **25 — Nettoyage** : dossier vide parasite `Caddyfile;C` supprimé (non suivi par git).
 - [ ] **3 — Jours fériés Euronext** : calendrier des fermetures (1er janvier, Vendredi saint, lundi de
       Pâques, 1er mai, 25 et 26 décembre) dans `isMarketOpen` / fenêtres du worker.
 
