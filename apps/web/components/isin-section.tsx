@@ -1,15 +1,19 @@
 import { peaEligibility } from '@bourse/core';
-import { saveIsin } from '@/app/(app)/instruments/[id]/actions';
+import { changeSymbol, saveIsin } from '@/app/(app)/instruments/[id]/actions';
 
 /** ISIN du titre et indice d'éligibilité au PEA. */
 export function IsinSection({
   instrumentId,
   isin,
   canEdit,
+  isAdmin = false,
+  symbol = '',
 }: {
   instrumentId: string;
   isin: string | null;
   canEdit: boolean;
+  isAdmin?: boolean;
+  symbol?: string;
 }) {
   const eligibility = peaEligibility(isin);
   return (
@@ -50,6 +54,28 @@ export function IsinSection({
             />
           </label>
           <button className="btn-secondary">Enregistrer</button>
+        </form>
+      )}
+      {isAdmin && (
+        <form
+          action={changeSymbol.bind(null, instrumentId)}
+          className="flex flex-wrap items-end gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"
+        >
+          <label className="flex flex-col gap-1">
+            Nouveau symbole Yahoo
+            <input
+              name="symbol"
+              placeholder={symbol}
+              maxLength={20}
+              required
+              className="input w-44 font-mono uppercase"
+            />
+          </label>
+          <button className="btn-secondary">Changer de symbole</button>
+          <span className="w-full text-xs text-slate-500">
+            Le titre garde ses ordres, alertes et clôtures. Si ce symbole est déjà suivi avec le
+            même ISIN, les deux sont fusionnés.
+          </span>
         </form>
       )}
     </section>

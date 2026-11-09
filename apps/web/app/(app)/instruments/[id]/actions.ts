@@ -4,6 +4,7 @@ import { normalizeIsin } from '@bourse/core';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { yahoo } from '@/lib/yahoo';
 
 /** Saisie d'un split (administrateur : la RLS refuse les autres comptes). */
 export async function addSplit(instrumentId: string, formData: FormData) {
@@ -59,4 +60,38 @@ export async function saveIsin(instrumentId: string, formData: FormData) {
   if (error) redirect(`${path}?error=${encodeURIComponent(error.message)}`);
   revalidatePath('/', 'layout');
   redirect(path);
+}
+
+/**
+ * Nouveau symbole Yahoo (administrateur). Le symbole est d'abord vérifié auprès de Yahoo :
+ * il doit exister et coter en euros. Même ISIN déjà suivi sous ce symbole : fusion.
+ */
+export async function changeSymbol(instrumentId: string, formData: FormData) {
+  const path = `/instruments/${instrumentId}`;
+  const symbol = String(formData.get('symbol') ?? '')
+    .trim()
+    .toUpperCase();
+  if (!/^[\^A-Z0-9.=-]{1,20}$/.test(symbol)) {
+    redirect(`${path}?error=${encodeURIComponent('Symbole invalide')}`);
+  }
+  let name: string | null = null;
+  let problem: string | null = null;
+  try {
+    const quote = await yahoo.getQuote(symbol);
+    if (quote.currency !== 'EUR') problem = `${symbol} cote en ${quote.currency}, pas en EUR`;
+    name = quote.name;
+  } catch {
+    problem = `${symbol} est inconnu de Yahoo`;
+  }
+  if (problem) redirect(`${path}?error=${encodeURIComponent(problem)}`);
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('admin_change_symbol', {
+    p_instrument: instrumentId,
+    p_symbol: symbol,
+    p_name: name ?? undefined,
+  });
+  if (error) redirect(`${path}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath('/', 'layout');
+  redirect(`${path}?notice=symbol`);
 }

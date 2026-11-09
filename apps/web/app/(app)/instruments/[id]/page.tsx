@@ -17,10 +17,10 @@ export default async function InstrumentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, notice } = await searchParams;
   const supabase = await createClient();
   const { selected } = await portfolioScope(supabase);
 
@@ -166,10 +166,17 @@ export default async function InstrumentPage({
           {error}
         </p>
       )}
+      {notice === 'symbol' && (
+        <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+          Symbole changé : le worker récupère la cote au prochain cycle.
+        </p>
+      )}
       <IsinSection
         instrumentId={inst.data.id}
         isin={inst.data.isin}
         canEdit={!inst.data.isin || !!isAdmin}
+        isAdmin={!!isAdmin}
+        symbol={inst.data.yahoo_symbol}
       />
       <SplitsSection
         instrumentId={inst.data.id}

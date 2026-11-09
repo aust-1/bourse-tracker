@@ -19,6 +19,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   (prélèvements sociaux, plus l'impôt sur le revenu avant 5 ans ; taux réglables).
 - **ISIN et éligibilité** : ISIN saisi sur la fiche du titre (clé de contrôle vérifiée) ; un titre dont
   l'émetteur est hors EEE est signalé « hors PEA » sur la fiche et sur le tableau de bord d'un PEA.
+  L'administrateur peut changer le symbole Yahoo d'un titre sans rien perdre (fusion si le même ISIN
+  est déjà suivi sous ce symbole).
 - **Tableau de bord en direct** : valeur, variation du jour (tient compte des ordres passés dans la journée),
   gain latent et réalisé, PRU (méthode du prix moyen pondéré), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.

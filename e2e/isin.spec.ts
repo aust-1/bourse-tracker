@@ -35,3 +35,18 @@ test('ISIN : saisie validée, éligibilité au PEA, alerte sur le tableau de bor
   await page.goto('/');
   await expect(page.getByRole('row', { name: new RegExp(CW8.name) })).toContainText('hors PEA');
 });
+
+test("changement de symbole : réservé à l'administrateur, format vérifié", async ({ page }) => {
+  const { userId, instrumentId } = await resetData();
+  await admin.from('profiles').update({ is_admin: false }).eq('user_id', userId);
+  await login(page);
+  await page.goto(`/instruments/${instrumentId}`);
+  const section = page.getByRole('region', { name: 'Identification' });
+  await expect(section.getByLabel('Nouveau symbole Yahoo')).toHaveCount(0);
+
+  await admin.from('profiles').update({ is_admin: true }).eq('user_id', userId);
+  await page.reload();
+  await section.getByLabel('Nouveau symbole Yahoo').fill('pas un symbole');
+  await section.getByRole('button', { name: 'Changer de symbole' }).click();
+  await expect(page.locator('p[role="alert"]')).toContainText('Symbole invalide');
+});

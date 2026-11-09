@@ -539,6 +539,10 @@ export type Database = {
     Functions: {
       aal_ok: { Args: never; Returns: boolean };
       access_ok: { Args: never; Returns: boolean };
+      admin_change_symbol: {
+        Args: { p_instrument: string; p_name?: string; p_symbol: string };
+        Returns: undefined;
+      };
       admin_list_accounts: {
         Args: never;
         Returns: {

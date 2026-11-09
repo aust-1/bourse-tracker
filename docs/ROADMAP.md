@@ -44,7 +44,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 - [x] **7 — ISIN et éligibilité PEA** : ISIN renseigné (saisie / recherche), alerte si l'ISIN n'est
       pas d'un pays de l'EEE.
-- [ ] **23 — Rattachement par ISIN** : changement de symbole Yahoo sans perte d'historique.
+- [x] **23 — Rattachement par ISIN** : changement de symbole Yahoo sans perte d'historique.
 - [ ] **22 — Seconde source de prix** : fournisseur de secours avec bascule automatique.
 
 ## 6. Écrans
