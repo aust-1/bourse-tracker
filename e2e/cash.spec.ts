@@ -37,7 +37,7 @@ test('mouvements : versement, dividende, liquidités et plafond du PEA', async (
 
   // tableau de bord : liquidités et valeur totale
   await page.goto('/');
-  await expect(page.getByText('Liquidités', { exact: true })).toBeVisible();
+  await expect(page.getByRole('paragraph').filter({ hasText: /^Liquidités$/ })).toBeVisible();
   await expect(page.getByText('Valeur totale')).toBeVisible();
   await expect(page.getByText('Versements cumulés')).toBeVisible();
   await expect(page.getByText('Dividendes reçus')).toBeVisible();
