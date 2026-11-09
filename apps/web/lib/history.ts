@@ -1,7 +1,7 @@
 import { buildSnapshots, parisDate, type Snapshot } from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { OrderRow, QuoteRow } from '@bourse/core';
+import type { CashMovement, IncomeFlow, OrderRow, QuoteRow } from '@bourse/core';
 
 export const RANGES = [
   { key: '1m', label: '1 M' },
@@ -28,6 +28,7 @@ export function buildHistory(
   orders: readonly OrderRow[],
   closes: readonly CloseRow[],
   quotes: readonly QuoteRow[],
+  movements: readonly Pick<CashMovement, 'kind' | 'amount' | 'occurredOn'>[] = [],
 ): Snapshot[] {
   if (orders.length === 0) return [];
 
@@ -68,7 +69,17 @@ export function buildHistory(
       closes: byInstrument.get(id) ?? [],
     })),
     dates,
+    incomeFlows(movements),
   );
+}
+
+/** Dividendes (+) et frais hors courtage (−) : les versements et retraits ne sont pas un gain. */
+export function incomeFlows(
+  movements: readonly Pick<CashMovement, 'kind' | 'amount' | 'occurredOn'>[],
+): IncomeFlow[] {
+  return movements
+    .filter((m) => m.kind === 'dividend' || m.kind === 'fee')
+    .map((m) => ({ date: m.occurredOn, amount: m.kind === 'dividend' ? m.amount : -m.amount }));
 }
 
 export interface PeriodStats {
@@ -79,8 +90,10 @@ export interface PeriodStats {
   gain: number;
   /** Gain rapporté à la valeur de départ + apports de la période ; null si base nulle. */
   gainPct: number | null;
-  /** Apports nets de la période (achats moins ventes) */
+  /** Apports nets de la période (achats moins ventes, moins revenus) */
   contributions: number;
+  /** Revenus de la période : dividendes moins frais hors courtage (inclus dans le gain) */
+  income: number;
 }
 
 function shiftMonths(day: string, months: number): string {
@@ -123,7 +136,14 @@ export function periodStats(
   const contributions = end.netContributions - baseContrib;
   const gain = end.marketValue - baseValue - contributions;
   const capital = baseValue + contributions;
-  return { points, end, gain, gainPct: capital > 0 ? (gain / capital) * 100 : null, contributions };
+  return {
+    points,
+    end,
+    gain,
+    gainPct: capital > 0 ? (gain / capital) * 100 : null,
+    contributions,
+    income: end.income - (base ? base.income : 0),
+  };
 }
 
 type Client = SupabaseClient<Database>;

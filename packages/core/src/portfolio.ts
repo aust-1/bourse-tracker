@@ -13,8 +13,19 @@ export interface Snapshot {
   marketValue: number;
   costBasis: number;
   realizedPl: number;
-  /** Apports nets cumulés : achats (frais inclus) moins produit net des ventes. */
+  /**
+   * Apports nets cumulés : achats (frais inclus) moins produit net des ventes, moins les revenus
+   * encaissés (dividendes nets de frais). Gain = valeur − apports : un dividende est un gain.
+   */
   netContributions: number;
+  /** Revenus cumulés : dividendes moins frais hors courtage (droits de garde…). */
+  income: number;
+}
+
+/** Revenu daté (signé) : dividende (+) ou frais hors courtage (−). */
+export interface IncomeFlow {
+  date: string;
+  amount: number;
 }
 
 /**
@@ -26,6 +37,7 @@ export interface Snapshot {
 export function buildSnapshots(
   instruments: readonly InstrumentHistory[],
   dates: readonly string[],
+  incomeFlows: readonly IncomeFlow[] = [],
 ): Snapshot[] {
   const states = instruments.map((inst) => ({
     orders: sortOrders(inst.orders),
@@ -36,12 +48,20 @@ export function buildSnapshots(
     lastClose: null as number | null,
     flow: 0,
   }));
+  const flows = [...incomeFlows].sort((a, b) => a.date.localeCompare(b.date));
+  let fi = 0;
+  let income = 0;
 
   return dates.map((date) => {
     let marketValue = 0;
     let costBasis = 0;
     let realizedPl = 0;
     let netContributions = 0;
+
+    while (fi < flows.length && flows[fi]!.date <= date) {
+      income += flows[fi]!.amount;
+      fi++;
+    }
 
     for (const s of states) {
       while (s.oi < s.orders.length && parisDate(s.orders[s.oi]!.executedAt) <= date) {
@@ -62,7 +82,14 @@ export function buildSnapshots(
       realizedPl += s.pos.realizedPl;
       netContributions += s.flow;
     }
-    return { date, marketValue, costBasis, realizedPl, netContributions };
+    return {
+      date,
+      marketValue,
+      costBasis,
+      realizedPl,
+      netContributions: netContributions - income,
+      income,
+    };
   });
 }
 

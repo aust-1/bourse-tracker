@@ -25,7 +25,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
       ordres rattachés à un compte, sélecteur de compte, données existantes rattachées à un PEA.
 - [x] **5 — Liquidités et versements** : dépôts / retraits d'espèces, solde de liquidités, valeur
       totale du compte, suivi du plafond de versements (150 000 € PEA, 225 000 € PEA + PEA-PME).
-- [ ] **1 — Dividendes** : mouvement « dividende » (montant net) compté dans le gain réalisé, la
+- [x] **1 — Dividendes** : mouvement « dividende » (montant net) compté dans le gain réalisé, la
       courbe et les liquidités.
 - [ ] **2 — Divisions / regroupements (splits)** : événement de split qui ajuste quantités et PRU,
       pris en compte par le rejeu des ordres.

@@ -15,7 +15,7 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { selected } = await portfolioScope(supabase);
 
-  const [inst, orders, quote] = await Promise.all([
+  const [inst, orders, quote, dividends] = await Promise.all([
     supabase
       .from('instruments')
       .select('id, yahoo_symbol, name, exchange')
@@ -30,8 +30,18 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
       return q.order('executed_at', { ascending: false }).order('id').range(from, to);
     }),
     supabase.from('quotes_latest').select('*').eq('instrument_id', id).maybeSingle(),
+    (() => {
+      let q = supabase
+        .from('cash_movements')
+        .select('amount, occurred_on')
+        .eq('instrument_id', id)
+        .eq('kind', 'dividend');
+      if (selected) q = q.eq('portfolio_id', selected.id);
+      return q.order('occurred_on', { ascending: false });
+    })(),
   ]);
   if (!inst.data) notFound();
+  const dividendTotal = (dividends.data ?? []).reduce((s, d) => s + Number(d.amount), 0);
 
   const myOrders = orders.map((o) => ({
     id: o.id,
@@ -93,6 +103,13 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
         <p className="mt-2 text-sm">
           Gain réalisé : <Pl value={pos.realizedPl} />
         </p>
+        {dividendTotal > 0 && (
+          <p className="mt-1 text-sm" data-testid="instrument-dividends">
+            Dividendes reçus : {eur(dividendTotal)} ({dividends.data!.length} versement
+            {dividends.data!.length > 1 ? 's' : ''}, dernier le{' '}
+            {dividends.data![0]!.occurred_on.split('-').reverse().join('/')})
+          </p>
+        )}
       </section>
 
       <section className="card">

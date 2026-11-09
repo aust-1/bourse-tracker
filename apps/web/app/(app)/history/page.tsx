@@ -2,6 +2,7 @@ import { parisDate } from '@bourse/core';
 import Link from 'next/link';
 import { LineChart } from '@/components/line-chart';
 import { Pl } from '@/components/pl';
+import { loadCash } from '@/lib/cash';
 import { eur } from '@/lib/format';
 import { buildHistory, isRangeKey, loadCloses, periodStats, RANGES } from '@/lib/history';
 import { portfolioScope } from '@/lib/portfolios';
@@ -20,11 +21,14 @@ export default async function HistoryPage({
 
   const supabase = await createClient();
   const { selected } = await portfolioScope(supabase);
-  const { orders, instruments, quotes } = await loadPortfolioData(supabase, selected?.id ?? null);
+  const [{ orders, instruments, quotes }, movements] = await Promise.all([
+    loadPortfolioData(supabase, selected?.id ?? null),
+    loadCash(supabase, selected?.id ?? null).catch(() => []),
+  ]);
   const ids = [...new Set(orders.map((o) => o.instrumentId))];
   const closes = await loadCloses(supabase, ids);
 
-  const snaps = buildHistory(orders, closes, quotes);
+  const snaps = buildHistory(orders, closes, quotes, movements);
   const stats = periodStats(snaps, range, parisDate(new Date()));
 
   const withHistory = new Set(closes.map((c) => c.instrumentId));
@@ -75,7 +79,10 @@ export default async function HistoryPage({
               <p className="mt-1 display">
                 <Pl value={stats.gain} />
               </p>
-              <p className="mt-1 text-xs text-slate-500">Hors apports (achats et ventes)</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Hors apports (achats et ventes)
+                {stats.income !== 0 && <>, dont {eur(stats.income)} de dividendes nets</>}
+              </p>
             </div>
             <div className="card">
               <p className="text-xs text-slate-500">Rendement</p>

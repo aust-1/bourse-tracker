@@ -53,7 +53,7 @@ export function LiveDashboard(props: {
   instruments: InstrumentRow[];
   initialQuotes: QuoteRow[];
   /** Liquidités du périmètre affiché (null si aucun mouvement enregistré) */
-  cash?: { balance: number; deposits: number } | null;
+  cash?: { balance: number; deposits: number; dividends: number } | null;
 }) {
   const [quotes, setQuotes] = useState(
     () => new Map(props.initialQuotes.map((q) => [q.instrumentId, q])),
@@ -166,6 +166,7 @@ export function LiveDashboard(props: {
             {eur(totals.marketValue + props.cash.balance)}
           </Stat>
           <Stat label="Versements cumulés">{eur(props.cash.deposits)}</Stat>
+          <Stat label="Dividendes reçus">{eur(props.cash.dividends)}</Stat>
         </div>
       )}
 

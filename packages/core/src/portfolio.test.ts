@@ -30,6 +30,23 @@ describe('buildSnapshots', () => {
     ],
   };
 
+  it('dividendes et frais : revenus cumulés, retranchés des apports (un dividende est un gain)', () => {
+    const s = buildSnapshots(
+      [inst],
+      ['2026-09-22', '2026-09-23', '2026-09-24'],
+      [
+        { date: '2026-09-24', amount: -2 },
+        { date: '2026-09-23', amount: 15 },
+      ],
+    );
+    expect(s[0]).toMatchObject({ income: 0, netContributions: 1000 });
+    expect(s[1]).toMatchObject({ income: 15, netContributions: 985 });
+    // vente de 4 × 112 = 448 ; frais de garde de 2 €
+    expect(s[2]).toMatchObject({ income: 13, netContributions: 1000 - 448 - 13 });
+    // gain = valeur − apports = 660 − 539 = 121 = 60 latent + 48 réalisé + 13 de revenus
+    expect(s[2]!.marketValue - s[2]!.netContributions).toBe(121);
+  });
+
   it('valorise chaque jour à la clôture, en tenant compte des ordres du jour', () => {
     const s = buildSnapshots([inst], ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24']);
     expect(s[0]).toMatchObject({ marketValue: 0, costBasis: 0, realizedPl: 0 });

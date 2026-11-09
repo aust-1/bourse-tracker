@@ -40,6 +40,9 @@ test('mouvements : versement, dividende, liquidités et plafond du PEA', async (
   await expect(page.getByText('Liquidités', { exact: true })).toBeVisible();
   await expect(page.getByText('Valeur totale')).toBeVisible();
   await expect(page.getByText('Versements cumulés')).toBeVisible();
+  await expect(page.getByText('Dividendes reçus')).toBeVisible();
+  await page.getByRole('link', { name: CW8.name }).click();
+  await expect(page.getByTestId('instrument-dividends')).toContainText('12,50');
 
   // suppression d'un mouvement
   await page.goto('/cash');

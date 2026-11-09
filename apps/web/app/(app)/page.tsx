@@ -25,7 +25,9 @@ export default async function Dashboard() {
   let invested: number[];
   try {
     const ids = [...new Set(orders.map((o) => o.instrumentId))];
-    const snaps = buildHistory(orders, await loadCloses(supabase, ids), quotes).slice(-30);
+    const snaps = buildHistory(orders, await loadCloses(supabase, ids), quotes, movements).slice(
+      -30,
+    );
     trend = snaps.map((s) => s.marketValue);
     invested = snaps.map((s) => s.netContributions);
   } catch {
@@ -55,7 +57,11 @@ export default async function Dashboard() {
         orders={orders}
         instruments={instruments}
         initialQuotes={quotes}
-        cash={cash ? { balance: cash.balance, deposits: cash.deposits } : null}
+        cash={
+          cash
+            ? { balance: cash.balance, deposits: cash.deposits, dividends: cash.dividends }
+            : null
+        }
       />
     </div>
   );

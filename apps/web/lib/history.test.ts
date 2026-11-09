@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildHistory, periodStats, rangeStart } from './history';
+import { buildHistory, incomeFlows, periodStats, rangeStart } from './history';
 import type { OrderRow, QuoteRow } from '@bourse/core';
 
 const order = (
@@ -115,5 +115,21 @@ describe('periodStats', () => {
     const snaps = buildHistory([order('1', 'buy', 10, 100, '2026-08-24T08:00:00Z')], closes, []);
     expect(periodStats(snaps, '1m', '2027-01-01')).toBeNull();
     expect(periodStats([], 'all', '2026-09-26')).toBeNull();
+  });
+});
+
+describe('incomeFlows', () => {
+  it('garde les dividendes (+) et les frais (−), ignore versements et retraits', () => {
+    expect(
+      incomeFlows([
+        { kind: 'deposit', amount: 1000, occurredOn: '2026-01-02' },
+        { kind: 'dividend', amount: 12, occurredOn: '2026-03-01' },
+        { kind: 'fee', amount: 3, occurredOn: '2026-04-01' },
+        { kind: 'withdrawal', amount: 50, occurredOn: '2026-05-01' },
+      ]),
+    ).toEqual([
+      { date: '2026-03-01', amount: 12 },
+      { date: '2026-04-01', amount: -3 },
+    ]);
   });
 });
