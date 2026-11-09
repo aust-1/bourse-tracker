@@ -160,3 +160,13 @@ et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 
 **Le site ne répond plus** : `docker compose logs web`, puis, depuis `/opt`, `scripts/status.sh` (route publiée ?
 alias réseau correct ?) et `docker logs caddy`, puis `sudo opt-deploy bourse-tracker`.
+
+**Courbe en escalier sur les périodes anciennes** (avant le correctif `b8b6d50`, l'historique des ordres de plus
+d'un an était rempli en barres **mensuelles**) : vider une fois les clôtures, le worker les recharge en journalier à
+son cycle suivant (une minute, en séance ou non).
+
+```sql
+delete from public.price_history;  -- SQL Editor de Supabase ; aucune donnée saisie n'est perdue
+```
+
+puis `docker compose restart worker`.
