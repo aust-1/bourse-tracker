@@ -55,7 +55,7 @@ Prérequis : Node 22+, pnpm, Docker (pour Supabase en local).
 
 ```bash
 pnpm install
-npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta,mailpit
+npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta
 cp .env.example .env   # pour le worker ; le web lit apps/web/.env.local (URL et clé anon locales)
 pnpm --filter @bourse/web dev
 ```

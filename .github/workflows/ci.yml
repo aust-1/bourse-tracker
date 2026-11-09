@@ -41,7 +41,7 @@ jobs:
         with:
           version: latest
       - name: Démarrer Supabase local (services minimaux)
-        run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta,mailpit
+        run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta
       - name: 'Tests de la base (pgTAP, RLS, contraintes, anti-vente à découvert)'
         run: supabase test db
       - name: Tests d'intégration du worker

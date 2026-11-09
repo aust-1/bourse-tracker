@@ -5,7 +5,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 ## 1. Comptes et sécurité
 
-- [ ] **18 — Mot de passe oublié** : demande de lien par email, page de nouveau mot de passe.
+- [x] **18 — Mot de passe oublié** : demande de lien par email, page de nouveau mot de passe.
 - [ ] **19 — Double authentification (TOTP)** : activation depuis les réglages, code demandé à la
       connexion (niveau `aal2` exigé dès qu'un facteur est enrôlé).
 - [ ] **20 — Gestion des comptes** : export de toutes ses données (JSON), suppression de son compte ;

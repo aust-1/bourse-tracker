@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SettingsForm } from '@/components/settings-form';
 import { createClient } from '@/lib/supabase/server';
 
@@ -9,7 +10,12 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Réglages</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Réglages</h1>
+        <Link href="/settings/password" className="btn-secondary">
+          Changer le mot de passe
+        </Link>
+      </div>
       <SettingsForm
         values={{
           discordWebhookUrl: data?.discord_webhook_url ?? '',

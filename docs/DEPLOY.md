@@ -23,6 +23,17 @@ Dans le tableau de bord Supabase :
 3. **Settings → API** : note l'URL, la clé `anon` et la clé `service_role`.
 4. **Database → Replication** (ou `supabase_realtime` publication) : la table `quotes_latest` doit y figurer
    (la migration s'en charge ; vérifie-le si le tableau de bord ne se met pas à jour en direct).
+5. **Mot de passe oublié** (page `/forgot`) :
+   - **Authentication → URL Configuration** : _Site URL_ = `https://<domaine>` et ajoute
+     `https://<domaine>/auth/confirm**` aux _Redirect URLs_ (sinon le lien de l'email renvoie
+     vers la Site URL sans ouvrir la session).
+   - **Authentication → Emails → SMTP Settings** : branche un SMTP (Resend : hôte `smtp.resend.com`,
+     port `465`, utilisateur `resend`, mot de passe = clé API, expéditeur d'un domaine vérifié).
+     Sans SMTP personnalisé, Supabase n'envoie le lien qu'aux membres de ton équipe Supabase.
+   - Le lien par défaut (`{{ .ConfirmationURL }}`) doit être ouvert dans le navigateur qui a fait la
+     demande. Pour qu'il marche depuis n'importe quel appareil, remplace-le dans le modèle
+     _Reset Password_ par
+     `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/settings/password`.
 
 ## 2. Services externes
 

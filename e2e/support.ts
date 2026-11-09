@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Page } from '@playwright/test';
-import { SERVICE_ROLE_KEY, SUPABASE_URL, TEST_EMAIL, TEST_PASSWORD } from './env';
+import { MAILPIT_URL, SERVICE_ROLE_KEY, SUPABASE_URL, TEST_EMAIL, TEST_PASSWORD } from './env';
 import { ensureUser } from './users';
 
 export const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -56,4 +56,26 @@ export async function mockInstrumentSearch(page: Page) {
       },
     }),
   );
+}
+
+/** Vide la boîte Mailpit (emails d'authentification de Supabase local). */
+export async function clearMailbox() {
+  await fetch(`${MAILPIT_URL}/api/v1/messages`, { method: 'DELETE' });
+}
+
+/** Attend le dernier email reçu par `to` et renvoie le premier lien qu'il contient. */
+export async function lastEmailLink(to: string, timeoutMs = 15_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}`);
+    const { messages } = (await res.json()) as { messages: { ID: string }[] };
+    if (messages.length > 0) {
+      const msg = await fetch(`${MAILPIT_URL}/api/v1/message/${messages[0]!.ID}`);
+      const { HTML, Text } = (await msg.json()) as { HTML: string; Text: string };
+      const link = /href="([^"]+)"/.exec(HTML)?.[1] ?? /https?:\/\/\S+/.exec(Text)?.[0];
+      if (link) return link.replaceAll('&amp;', '&');
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`aucun email reçu par ${to}`);
 }
