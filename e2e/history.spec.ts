@@ -39,6 +39,10 @@ test('historique : courbe, gain hors apports et changement de période', async (
   const rendement = page.locator('.card', { hasText: 'Rendement' });
   await expect(rendement).toContainText(/\+44,00\s%/);
   await expect(page.locator('.card', { hasText: 'Apports nets' })).toContainText(/1\s000,00\s€/);
+  // 45 jours : pas de TRI annualisé
+  await expect(page.locator('.card', { hasText: 'TRI annualisé' })).toContainText(
+    'au moins 365 jours',
+  );
 
   // 1 mois : l'achat est antérieur à la période, donc aucun apport
   await page.getByRole('link', { name: '1 M' }).click();

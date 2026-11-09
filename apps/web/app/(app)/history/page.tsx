@@ -107,7 +107,7 @@ export default async function HistoryPage({
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 {stats.xirrPct === null
-                  ? `Sur une période d’au moins  jours`
+                  ? `Sur une période d’au moins ${XIRR_MIN_DAYS} jours`
                   : 'Rendement par an de l’argent investi'}
               </p>
             </div>
