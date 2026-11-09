@@ -17,7 +17,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   performance) et rendement sur 1 M, 3 M, depuis janvier, 1 A ou Tout.
 - **Résumé quotidien** à l'heure choisie, jours de bourse seulement.
 - **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
-  Healthchecks.io du worker.
+  Healthchecks.io du worker, page « Supervision » (administrateur) : état du worker, échecs de cotation,
+  fraîcheur de chaque cote.
 - **Comptes** : le premier compte est administrateur et crée des liens d'invitation (un compte par lien,
   7 jours). La base refuse toute inscription sans invitation valide. L'administrateur voit tous les
   comptes et peut en désactiver un (connexion refusée, plus d'alertes ni de résumé).

@@ -357,19 +357,25 @@ export type Database = {
       };
       worker_status: {
         Row: {
+          failed: Json;
           id: number;
           last_cycle_at: string | null;
           last_error: string | null;
+          last_poll_at: string | null;
         };
         Insert: {
+          failed?: Json;
           id?: number;
           last_cycle_at?: string | null;
           last_error?: string | null;
+          last_poll_at?: string | null;
         };
         Update: {
+          failed?: Json;
           id?: number;
           last_cycle_at?: string | null;
           last_error?: string | null;
+          last_poll_at?: string | null;
         };
         Relationships: [];
       };
@@ -396,6 +402,19 @@ export type Database = {
       admin_set_disabled: {
         Args: { p_disabled: boolean; p_user: string };
         Returns: undefined;
+      };
+      admin_supervision: {
+        Args: never;
+        Returns: {
+          fetched_at: string;
+          followers: number;
+          instrument_id: string;
+          last_close_date: string;
+          name: string;
+          price: number;
+          quoted_at: string;
+          yahoo_symbol: string;
+        }[];
       };
       assert_no_oversell: {
         Args: { p_instrument: string; p_user: string };

@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AlertEventRow,
   AlertRow,
+  CycleRecord,
   Store,
   StoredQuote,
   TrackedInstrument,
@@ -103,10 +104,15 @@ export class SupabaseStore implements Store {
     return rows[0]?.close ?? null;
   }
 
-  async recordCycle(result: { error: string | null }): Promise<void> {
+  async recordCycle(result: CycleRecord): Promise<void> {
+    const now = new Date().toISOString();
     const { error } = await this.db
       .from('worker_status')
-      .update({ last_cycle_at: new Date().toISOString(), last_error: result.error })
+      .update({
+        last_cycle_at: now,
+        last_error: result.error,
+        ...(result.failed ? { last_poll_at: now, failed: result.failed } : {}),
+      })
       .eq('id', 1);
     if (error) throw new Error(`worker_status : ${error.message}`);
   }

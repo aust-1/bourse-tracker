@@ -2,6 +2,7 @@ import type { Order } from '@bourse/core';
 import type {
   AlertEventRow,
   AlertRow,
+  CycleRecord,
   Store,
   StoredQuote,
   TrackedInstrument,
@@ -13,7 +14,7 @@ export class MemoryStore implements Store {
   tracked: TrackedInstrument[] = [];
   quotes = new Map<string, StoredQuote>();
   closes = new Map<string, { date: string; close: number }[]>();
-  cycles: { error: string | null }[] = [];
+  cycles: CycleRecord[] = [];
   upserts = 0;
 
   async listTrackedInstruments() {
@@ -34,7 +35,7 @@ export class MemoryStore implements Store {
     return rows.length ? rows[rows.length - 1]!.close : null;
   }
 
-  async recordCycle(result: { error: string | null }) {
+  async recordCycle(result: CycleRecord) {
     this.cycles.push(result);
   }
 

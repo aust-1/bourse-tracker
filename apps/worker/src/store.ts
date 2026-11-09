@@ -40,7 +40,8 @@ export interface Store {
   upsertQuote(q: Omit<StoredQuote, 'fetchedAt'>): Promise<void>;
   /** Dernière clôture journalière strictement avant `beforeDate` (YYYY-MM-DD). */
   getPrevCloseFallback(instrumentId: string, beforeDate: string): Promise<number | null>;
-  recordCycle(result: { error: string | null }): Promise<void>;
+  /** Fin de cycle ; `failed` (cycles de cotation seulement) remplace la liste des échecs. */
+  recordCycle(result: CycleRecord): Promise<void>;
 
   /** Plus ancienne et plus récente clôture stockées pour un instrument. */
   getHistoryBounds(instrumentId: string): Promise<{ min: string | null; max: string | null }>;
@@ -80,4 +81,10 @@ export interface AlertEventRow {
   instrumentName: string;
   value: number;
   triggeredAt: Date;
+}
+
+export interface CycleRecord {
+  error: string | null;
+  /** Échecs de cotation du cycle ; absent hors cycle de cotation (rien n'est alors remplacé). */
+  failed?: { symbol: string; error: string }[];
 }

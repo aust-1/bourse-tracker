@@ -10,7 +10,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
       connexion (niveau `aal2` exigé dès qu'un facteur est enrôlé).
 - [x] **20 — Gestion des comptes** : export de toutes ses données (JSON), suppression de son compte ;
       pour l'administrateur, liste des comptes et désactivation / réactivation.
-- [ ] **21 — Page de supervision (administrateur)** : dernier cycle du worker, dernière erreur,
+- [x] **21 — Page de supervision (administrateur)** : dernier cycle du worker, dernière erreur,
       instruments sans cote ou à cote ancienne, retard observé.
 
 ## 2. Hygiène et justesse de base
