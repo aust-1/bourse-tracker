@@ -1,5 +1,6 @@
 import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { adjustOrdersBySplits, type Split } from '@bourse/core';
 import type { InstrumentRow, OrderRow, QuoteRow } from '@bourse/core';
 
 type Client = SupabaseClient<Database>;
@@ -35,7 +36,7 @@ export async function loadPortfolioData(
   supabase: Client,
   portfolioId: string | null = null,
 ): Promise<PortfolioData> {
-  const [orders, instruments, quotes] = await Promise.all([
+  const [orders, instruments, quotes, splits] = await Promise.all([
     fetchAll((from, to) => {
       let q = supabase
         .from('orders')
@@ -45,20 +46,40 @@ export async function loadPortfolioData(
     }),
     supabase.from('instruments').select('id, yahoo_symbol, name'),
     loadQuotes(supabase),
+    loadSplits(supabase),
   ]);
   if (instruments.error) throw new Error(instruments.error.message);
 
   return {
-    orders: orders.map((o) => ({
-      id: o.id,
-      instrumentId: o.instrument_id,
-      side: o.side,
-      quantity: o.quantity,
-      unitPrice: o.unit_price,
-      fees: o.fees,
-      executedAt: o.executed_at,
-    })),
+    // ordres convertis en titres d'après les splits (cohérents avec les cours ajustés)
+    orders: adjustOrdersBySplits(
+      orders.map((o) => ({
+        id: o.id,
+        instrumentId: o.instrument_id,
+        side: o.side,
+        quantity: o.quantity,
+        unitPrice: o.unit_price,
+        fees: o.fees,
+        executedAt: o.executed_at,
+      })),
+      splits,
+    ),
     instruments: instruments.data.map((i) => ({ id: i.id, symbol: i.yahoo_symbol, name: i.name })),
     quotes,
   };
+}
+
+/** Splits des instruments suivis (lecture filtrée par la RLS). */
+export async function loadSplits(supabase: Client): Promise<Split[]> {
+  const { data, error } = await supabase
+    .from('splits')
+    .select('instrument_id, effective_on, ratio_from, ratio_to')
+    .order('effective_on');
+  if (error) throw new Error(error.message);
+  return data.map((s) => ({
+    instrumentId: s.instrument_id,
+    effectiveOn: s.effective_on,
+    from: s.ratio_from,
+    to: s.ratio_to,
+  }));
 }

@@ -417,6 +417,44 @@ export type Database = {
         };
         Relationships: [];
       };
+      splits: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          effective_on: string;
+          id: string;
+          instrument_id: string;
+          ratio_from: number;
+          ratio_to: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          effective_on: string;
+          id?: string;
+          instrument_id: string;
+          ratio_from: number;
+          ratio_to: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          effective_on?: string;
+          id?: string;
+          instrument_id?: string;
+          ratio_from?: number;
+          ratio_to?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'splits_instrument_id_fkey';
+            columns: ['instrument_id'];
+            isOneToOne: false;
+            referencedRelation: 'instruments';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       user_instruments: {
         Row: {
           created_at: string;
@@ -511,6 +549,10 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined };
       invitation_is_valid: { Args: { p_code: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };
+      split_factor: {
+        Args: { p_at: string; p_instrument: string };
+        Returns: number;
+      };
       track_instrument: {
         Args: { p_exchange?: string; p_name?: string; p_symbol: string };
         Returns: string;

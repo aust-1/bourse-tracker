@@ -299,6 +299,32 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     }
   });
 
+  it('splits : ordres antérieurs convertis en titres d’après la division', async () => {
+    const store = new SupabaseStore(db);
+    const before = await store.getOrders(userId, instrumentId);
+    const split = await db
+      .from('splits')
+      .insert({
+        instrument_id: instrumentId,
+        effective_on: '2026-06-01',
+        ratio_from: 1,
+        ratio_to: 10,
+      })
+      .select('id')
+      .single();
+    try {
+      const after = await store.getOrders(userId, instrumentId);
+      expect(after.map((o) => o.quantity)).toEqual(before.map((o) => o.quantity * 10));
+      expect(after.map((o) => o.unitPrice)).toEqual(before.map((o) => o.unitPrice / 10));
+      const all = await store.listUserOrders(userId);
+      expect(all.find((o) => o.instrumentId === instrumentId)?.quantity).toBe(
+        before[0]!.quantity * 10,
+      );
+    } finally {
+      await db.from('splits').delete().eq('id', split.data!.id);
+    }
+  });
+
   it('pagination : plus de 1 000 ordres ne sont jamais tronqués', async () => {
     const store = new SupabaseStore(db);
     await db.from('orders').delete().not('id', 'is', null);

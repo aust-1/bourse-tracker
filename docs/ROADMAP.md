@@ -27,7 +27,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
       totale du compte, suivi du plafond de versements (150 000 € PEA, 225 000 € PEA + PEA-PME).
 - [x] **1 — Dividendes** : mouvement « dividende » (montant net) compté dans le gain réalisé, la
       courbe et les liquidités.
-- [ ] **2 — Divisions / regroupements (splits)** : événement de split qui ajuste quantités et PRU,
+- [x] **2 — Divisions / regroupements (splits)** : événement de split qui ajuste quantités et PRU,
       pris en compte par le rejeu des ordres.
 - [ ] **6 — Date d'ouverture et ancienneté** : compteur des 5 ans, estimation des prélèvements
       sociaux sur la plus-value latente (taux réglable).

@@ -1,4 +1,10 @@
-import { parisDate, type Order } from '@bourse/core';
+import {
+  adjustForSplits,
+  adjustOrdersBySplits,
+  parisDate,
+  type Order,
+  type Split,
+} from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
@@ -197,14 +203,17 @@ export class SupabaseStore implements Store {
         .order('id')
         .range(from, to),
     );
-    return rows.map((o) => ({
-      id: o.id,
-      side: o.side,
-      quantity: o.quantity,
-      unitPrice: o.unit_price,
-      fees: o.fees,
-      executedAt: o.executed_at,
-    }));
+    return adjustForSplits(
+      rows.map((o) => ({
+        id: o.id,
+        side: o.side,
+        quantity: o.quantity,
+        unitPrice: o.unit_price,
+        fees: o.fees,
+        executedAt: o.executed_at,
+      })),
+      await this.splits(instrumentId),
+    );
   }
 
   async claimAlert(alertId: string, at: Date): Promise<boolean> {
@@ -271,14 +280,30 @@ export class SupabaseStore implements Store {
         .order('id')
         .range(from, to),
     );
-    return rows.map((o) => ({
-      id: o.id,
-      instrumentId: o.instrument_id,
-      side: o.side,
-      quantity: o.quantity,
-      unitPrice: o.unit_price,
-      fees: o.fees,
-      executedAt: o.executed_at,
+    return adjustOrdersBySplits(
+      rows.map((o) => ({
+        id: o.id,
+        instrumentId: o.instrument_id,
+        side: o.side,
+        quantity: o.quantity,
+        unitPrice: o.unit_price,
+        fees: o.fees,
+        executedAt: o.executed_at,
+      })),
+      await this.splits(),
+    );
+  }
+
+  /** Splits (d'un instrument, ou de tous) : les ordres sont convertis en titres d'après. */
+  private async splits(instrumentId?: string): Promise<Split[]> {
+    let q = this.db.from('splits').select('instrument_id, effective_on, ratio_from, ratio_to');
+    if (instrumentId) q = q.eq('instrument_id', instrumentId);
+    const rows = must(await q, 'lecture des splits');
+    return rows.map((s) => ({
+      instrumentId: s.instrument_id,
+      effectiveOn: s.effective_on,
+      from: s.ratio_from,
+      to: s.ratio_to,
     }));
   }
 
