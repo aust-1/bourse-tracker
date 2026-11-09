@@ -72,11 +72,13 @@ describe('ordersToCsv', () => {
         unit_price: 100.5,
         fees: 1.25,
         note: '=HYPERLINK("x")',
+        portfolio: 'PEA',
       },
     ]);
     expect(csv.startsWith('﻿date;symbole')).toBe(true);
     expect(csv).toContain('"Amundi; ""World"""');
     expect(csv).toContain('"\'=HYPERLINK(""x"")"');
     expect(csv).toContain(';achat;10;100.5;1.25;');
+    expect(csv.endsWith(';PEA\r\n')).toBe(true);
   });
 });

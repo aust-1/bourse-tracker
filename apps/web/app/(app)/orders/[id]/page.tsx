@@ -1,6 +1,7 @@
 import { toParisLocal } from '@bourse/core';
 import { notFound } from 'next/navigation';
 import { OrderForm } from '@/components/order-form';
+import { loadPortfolios } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
 import { deleteOrder } from '../actions';
 
@@ -14,10 +15,11 @@ export default async function EditOrderPage({
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
+  const portfolios = await loadPortfolios(supabase);
   const { data: o } = await supabase
     .from('orders')
     .select(
-      'id, side, quantity, unit_price, fees, executed_at, note, instruments(yahoo_symbol, name)',
+      'id, side, quantity, unit_price, fees, executed_at, note, portfolio_id, instruments(yahoo_symbol, name)',
     )
     .eq('id', id)
     .maybeSingle();
@@ -33,6 +35,7 @@ export default async function EditOrderPage({
       )}
       <OrderForm
         id={o.id}
+        portfolios={portfolios}
         values={{
           symbol: o.instruments?.yahoo_symbol ?? '',
           label: `${o.instruments?.name ?? ''} (${o.instruments?.yahoo_symbol ?? ''})`,
@@ -42,6 +45,7 @@ export default async function EditOrderPage({
           fees: String(o.fees),
           executedAt: toParisLocal(o.executed_at),
           note: o.note ?? '',
+          portfolioId: o.portfolio_id,
         }}
       />
       <form action={deleteOrder.bind(null, o.id)}>

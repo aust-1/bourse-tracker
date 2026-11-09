@@ -30,16 +30,19 @@ export async function loadQuotes(supabase: Client): Promise<QuoteRow[]> {
   return data.map(toQuoteRow);
 }
 
-export async function loadPortfolioData(supabase: Client): Promise<PortfolioData> {
+/** Ordres, instruments et cotes ; `portfolioId` limite les ordres à un portefeuille. */
+export async function loadPortfolioData(
+  supabase: Client,
+  portfolioId: string | null = null,
+): Promise<PortfolioData> {
   const [orders, instruments, quotes] = await Promise.all([
-    fetchAll((from, to) =>
-      supabase
+    fetchAll((from, to) => {
+      let q = supabase
         .from('orders')
-        .select('id, instrument_id, side, quantity, unit_price, fees, executed_at')
-        .order('executed_at')
-        .order('id')
-        .range(from, to),
-    ),
+        .select('id, instrument_id, side, quantity, unit_price, fees, executed_at');
+      if (portfolioId) q = q.eq('portfolio_id', portfolioId);
+      return q.order('executed_at').order('id').range(from, to);
+    }),
     supabase.from('instruments').select('id, yahoo_symbol, name'),
     loadQuotes(supabase),
   ]);

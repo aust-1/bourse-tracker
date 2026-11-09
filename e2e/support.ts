@@ -21,6 +21,8 @@ export async function resetData() {
   await admin.from('instruments').delete().not('id', 'is', null);
 
   const userId = await ensureUser(admin, TEST_EMAIL, TEST_PASSWORD);
+  // un seul portefeuille (le PEA créé avec le compte), sélecteur absent
+  await admin.from('portfolios').delete().eq('user_id', userId).neq('name', 'PEA');
   // pas de double authentification laissée par un parcours précédent
   const factors = await admin.auth.admin.mfa.listFactors({ userId });
   for (const f of factors.data?.factors ?? []) {

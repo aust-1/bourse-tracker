@@ -18,6 +18,7 @@ const db = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
 describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base locale)', () => {
   let instrumentId: string;
   let userId: string;
+  let portfolioId: string;
 
   beforeAll(async () => {
     await db.from('alerts').delete().not('id', 'is', null);
@@ -27,6 +28,8 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     await db.from('instruments').delete().not('id', 'is', null);
 
     userId = await ensureUser(db, 'int@bourse.local', 'int-password-123');
+    const pf = await db.from('portfolios').select('id').eq('user_id', userId).limit(1).single();
+    portfolioId = pf.data!.id;
 
     const inst = await db
       .from('instruments')
@@ -39,6 +42,7 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
       .insert({ yahoo_symbol: 'IGN.PA', name: 'Ignoré', exchange: 'PAR' });
     await db.from('orders').insert({
       user_id: userId,
+      portfolio_id: portfolioId,
       instrument_id: instrumentId,
       side: 'buy',
       quantity: 1,
@@ -310,6 +314,7 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     // 1 200 achats répartis sur 3 instruments : la limite de PostgREST est de 1 000 lignes
     const rows = Array.from({ length: 1200 }, (_, i) => ({
       user_id: userId,
+      portfolio_id: portfolioId,
       instrument_id: ids[i % 3]!,
       side: 'buy' as const,
       quantity: 1,

@@ -21,7 +21,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 ## 3. Modèle de données PEA
 
-- [ ] **8 — Plusieurs comptes par utilisateur** (PEA, PEA-PME, compte-titres) : table `accounts`,
+- [x] **8 — Plusieurs comptes par utilisateur** (PEA, PEA-PME, compte-titres) : table `accounts`,
       ordres rattachés à un compte, sélecteur de compte, données existantes rattachées à un PEA.
 - [ ] **5 — Liquidités et versements** : dépôts / retraits d'espèces, solde de liquidités, valeur
       totale du compte, suivi du plafond de versements (150 000 € PEA, 225 000 € PEA + PEA-PME).

@@ -181,6 +181,7 @@ export type Database = {
           id: string;
           instrument_id: string;
           note: string | null;
+          portfolio_id: string;
           quantity: number;
           side: Database['public']['Enums']['order_side'];
           unit_price: number;
@@ -193,6 +194,7 @@ export type Database = {
           id?: string;
           instrument_id: string;
           note?: string | null;
+          portfolio_id: string;
           quantity: number;
           side: Database['public']['Enums']['order_side'];
           unit_price: number;
@@ -205,6 +207,7 @@ export type Database = {
           id?: string;
           instrument_id?: string;
           note?: string | null;
+          portfolio_id?: string;
           quantity?: number;
           side?: Database['public']['Enums']['order_side'];
           unit_price?: number;
@@ -218,7 +221,41 @@ export type Database = {
             referencedRelation: 'instruments';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'orders_portfolio_fk';
+            columns: ['portfolio_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'portfolios';
+            referencedColumns: ['id', 'user_id'];
+          },
         ];
+      };
+      portfolios: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: Database['public']['Enums']['portfolio_kind'];
+          name: string;
+          opened_on: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['portfolio_kind'];
+          name: string;
+          opened_on?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['portfolio_kind'];
+          name?: string;
+          opened_on?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       price_history: {
         Row: {
@@ -417,7 +454,7 @@ export type Database = {
         }[];
       };
       assert_no_oversell: {
-        Args: { p_instrument: string; p_user: string };
+        Args: { p_instrument: string; p_portfolio: string };
         Returns: undefined;
       };
       delete_my_account: { Args: never; Returns: undefined };
@@ -438,6 +475,7 @@ export type Database = {
         | 'position_pl_above'
         | 'position_pl_below';
       order_side: 'buy' | 'sell';
+      portfolio_kind: 'pea' | 'pea_pme' | 'cto';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -572,6 +610,7 @@ export const Constants = {
         'position_pl_below',
       ],
       order_side: ['buy', 'sell'],
+      portfolio_kind: ['pea', 'pea_pme', 'cto'],
     },
   },
 } as const;

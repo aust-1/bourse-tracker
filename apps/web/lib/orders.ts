@@ -16,6 +16,11 @@ export const orderSchema = z.object({
       (d) => d.getTime() <= Date.now() + 5 * 60_000,
       'La date ne peut pas être dans le futur',
     ),
+  portfolioId: z
+    .string()
+    .trim()
+    .refine((s) => s === '' || /^[0-9a-f-]{36}$/i.test(s), 'Portefeuille invalide')
+    .transform((s) => (s === '' ? null : s)),
   note: z
     .string()
     .trim()
@@ -26,10 +31,9 @@ export type OrderInput = z.infer<typeof orderSchema>;
 
 export function parseOrderForm(formData: FormData): { data?: OrderInput; error?: string } {
   const raw = Object.fromEntries(
-    ['symbol', 'side', 'quantity', 'unitPrice', 'fees', 'executedAt', 'note'].map((k) => [
-      k,
-      String(formData.get(k) ?? ''),
-    ]),
+    ['symbol', 'side', 'quantity', 'unitPrice', 'fees', 'executedAt', 'portfolioId', 'note'].map(
+      (k) => [k, String(formData.get(k) ?? '')],
+    ),
   );
   const parsed = orderSchema.safeParse(raw);
   if (parsed.success) return { data: parsed.data };
@@ -53,6 +57,8 @@ export interface CsvOrder {
   unit_price: number;
   fees: number;
   note: string | null;
+  /** Nom du portefeuille (vide si inconnu) */
+  portfolio?: string;
 }
 
 const csvCell = (v: string | number | null) => {
@@ -63,7 +69,17 @@ const csvCell = (v: string | number | null) => {
 };
 
 export function ordersToCsv(rows: readonly CsvOrder[]): string {
-  const header = ['date', 'symbole', 'nom', 'sens', 'quantite', 'prix_unitaire', 'frais', 'note'];
+  const header = [
+    'date',
+    'symbole',
+    'nom',
+    'sens',
+    'quantite',
+    'prix_unitaire',
+    'frais',
+    'note',
+    'portefeuille',
+  ];
   const lines = rows.map((r) =>
     [
       r.executed_at,
@@ -74,6 +90,7 @@ export function ordersToCsv(rows: readonly CsvOrder[]): string {
       r.unit_price,
       r.fees,
       r.note,
+      r.portfolio ?? '',
     ]
       .map(csvCell)
       .join(';'),

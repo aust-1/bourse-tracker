@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { InstrumentChart } from '@/components/instrument-chart';
 import { Pl } from '@/components/pl';
 import { dateTime, eur, num } from '@/lib/format';
+import { portfolioScope } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function InstrumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  const { selected } = await portfolioScope(supabase);
 
   const [inst, orders, quote] = await Promise.all([
     supabase
@@ -19,15 +21,14 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
       .select('id, yahoo_symbol, name, exchange')
       .eq('id', id)
       .maybeSingle(),
-    fetchAll((from, to) =>
-      supabase
+    fetchAll((from, to) => {
+      let q = supabase
         .from('orders')
         .select('id, side, quantity, unit_price, fees, executed_at')
-        .eq('instrument_id', id)
-        .order('executed_at', { ascending: false })
-        .order('id')
-        .range(from, to),
-    ),
+        .eq('instrument_id', id);
+      if (selected) q = q.eq('portfolio_id', selected.id);
+      return q.order('executed_at', { ascending: false }).order('id').range(from, to);
+    }),
     supabase.from('quotes_latest').select('*').eq('instrument_id', id).maybeSingle(),
   ]);
   if (!inst.data) notFound();

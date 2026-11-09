@@ -1,6 +1,7 @@
 import { LiveDashboard } from '@/components/live-dashboard';
 import { Sparkline } from '@/components/sparkline';
 import { buildHistory, loadCloses } from '@/lib/history';
+import { portfolioScope } from '@/lib/portfolios';
 import { loadPortfolioData } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
@@ -9,7 +10,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
   const supabase = await createClient();
-  const { orders, instruments, quotes } = await loadPortfolioData(supabase);
+  const { selected } = await portfolioScope(supabase);
+  const { orders, instruments, quotes } = await loadPortfolioData(supabase, selected?.id ?? null);
 
   // mini-courbe : 30 dernières séances (échec de lecture : le tableau de bord reste utilisable)
   let trend: number[];
@@ -27,7 +29,10 @@ export default async function Dashboard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Tableau de bord</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Tableau de bord</h1>
+          {selected && <p className="text-sm text-slate-500">{selected.name}</p>}
+        </div>
         {trend.length > 1 && (
           <Link href="/history" className="flex flex-col items-end gap-1 text-xs text-slate-500">
             <Sparkline

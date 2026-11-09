@@ -1,6 +1,7 @@
 import { fetchAll } from '@bourse/db';
 import Link from 'next/link';
 import { dateTime, eur, num } from '@/lib/format';
+import { portfolioScope } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
 
 type Search = Promise<{ instrument?: string; side?: string }>;
@@ -8,16 +9,19 @@ type Search = Promise<{ instrument?: string; side?: string }>;
 export default async function OrdersPage({ searchParams }: { searchParams: Search }) {
   const { instrument, side } = await searchParams;
   const supabase = await createClient();
+  const { portfolios, selected } = await portfolioScope(supabase);
+  const showPortfolio = !selected && portfolios.length > 1;
 
   // une requête neuve par page : un même constructeur ne doit pas être réutilisé avec .range()
   const page = (from: number, to: number) => {
     let query = supabase
       .from('orders')
       .select(
-        'id, side, quantity, unit_price, fees, executed_at, note, instruments(id, yahoo_symbol, name)',
+        'id, side, quantity, unit_price, fees, executed_at, note, instruments(id, yahoo_symbol, name), portfolios(name)',
       )
       .order('executed_at', { ascending: false })
       .order('id');
+    if (selected) query = query.eq('portfolio_id', selected.id);
     if (instrument) query = query.eq('instrument_id', instrument);
     if (side === 'buy' || side === 'sell') query = query.eq('side', side);
     return query.range(from, to);
@@ -71,6 +75,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
           <thead className="border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th className="th">Date</th>
+              {showPortfolio && <th className="th">Portefeuille</th>}
               <th className="th">Instrument</th>
               <th className="th">Sens</th>
               <th className="th text-right">Quantité</th>
@@ -83,7 +88,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {orders?.length === 0 && (
               <tr>
-                <td className="td text-slate-500" colSpan={8}>
+                <td className="td text-slate-500" colSpan={showPortfolio ? 9 : 8}>
                   Aucun ordre. Ajoute ton premier ordre pour commencer.
                 </td>
               </tr>
@@ -91,6 +96,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
             {orders?.map((o) => (
               <tr key={o.id}>
                 <td className="td whitespace-nowrap">{dateTime(o.executed_at)}</td>
+                {showPortfolio && <td className="td">{o.portfolios?.name}</td>}
                 <td className="td">
                   {o.instruments?.name}{' '}
                   <span className="text-xs text-slate-500">{o.instruments?.yahoo_symbol}</span>

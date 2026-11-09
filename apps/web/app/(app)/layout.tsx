@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { PortfolioSwitcher } from '@/components/portfolio-switcher';
+import { portfolioScope } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from '../login/actions';
 
@@ -7,12 +9,16 @@ const links = [
   { href: '/orders', label: 'Ordres' },
   { href: '/alerts', label: 'Alertes' },
   { href: '/history', label: 'Historique' },
+  { href: '/portfolios', label: 'Portefeuilles' },
   { href: '/settings', label: 'Réglages' },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: isAdmin } = await supabase.rpc('is_admin');
+  const [{ data: isAdmin }, scope] = await Promise.all([
+    supabase.rpc('is_admin'),
+    portfolioScope(supabase).catch(() => ({ portfolios: [], selected: null })),
+  ]);
   const nav = isAdmin
     ? [
         ...links,
@@ -35,6 +41,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
         </nav>
+        <PortfolioSwitcher
+          portfolios={scope.portfolios.map((p) => ({ id: p.id, name: p.name }))}
+          selected={scope.selected?.id ?? null}
+        />
         <form action={signOut}>
           <button className="text-sm text-tube hover:bg-tube hover:text-phosphor">
             [esc] déconnexion

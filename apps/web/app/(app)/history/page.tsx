@@ -4,6 +4,7 @@ import { LineChart } from '@/components/line-chart';
 import { Pl } from '@/components/pl';
 import { eur } from '@/lib/format';
 import { buildHistory, isRangeKey, loadCloses, periodStats, RANGES } from '@/lib/history';
+import { portfolioScope } from '@/lib/portfolios';
 import { loadPortfolioData } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/server';
 
@@ -18,7 +19,8 @@ export default async function HistoryPage({
   const range = isRangeKey(rangeParam) ? rangeParam : '3m';
 
   const supabase = await createClient();
-  const { orders, instruments, quotes } = await loadPortfolioData(supabase);
+  const { selected } = await portfolioScope(supabase);
+  const { orders, instruments, quotes } = await loadPortfolioData(supabase, selected?.id ?? null);
   const ids = [...new Set(orders.map((o) => o.instrumentId))];
   const closes = await loadCloses(supabase, ids);
 
@@ -30,7 +32,10 @@ export default async function HistoryPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Historique</h1>
+      <div>
+        <h1 className="text-2xl font-semibold">Historique</h1>
+        {selected && <p className="text-sm text-slate-500">{selected.name}</p>}
+      </div>
 
       <nav className="flex flex-wrap gap-1" aria-label="Période">
         {RANGES.map((r) => (
