@@ -1,7 +1,7 @@
 # Bourse Tracker
 
 Suivi d'un **PEA** (actions et ETF européens, en EUR) : journal daté de chaque ordre, valeur du
-portefeuille en quasi temps réel, alertes par Discord et email. Plusieurs comptes, sur invitation :
+portefeuille en quasi temps réel, alertes par Discord, email, ntfy ou Telegram. Plusieurs comptes, sur invitation :
 chacun ne voit que ses propres ordres, alertes, réglages et titres.
 
 ## Fonctionnalités

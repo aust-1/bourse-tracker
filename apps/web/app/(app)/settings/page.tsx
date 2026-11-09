@@ -20,6 +20,7 @@ export default async function SettingsPage() {
         </Link>
       </div>
       <SettingsForm
+        telegramAvailable={Boolean(process.env.TELEGRAM_BOT_TOKEN)}
         values={{
           discordWebhookUrl: data?.discord_webhook_url ?? '',
           email: data?.email ?? '',
@@ -30,6 +31,8 @@ export default async function SettingsPage() {
           incomeTaxRate: String(data?.income_tax_rate ?? DEFAULT_INCOME_RATE),
           benchmarkSymbol: data?.benchmark_symbol ?? '',
           reportFrequency: data?.report_frequency ?? '',
+          ntfyUrl: data?.ntfy_url ?? '',
+          telegramChatId: data?.telegram_chat_id ?? '',
         }}
       />
       <MfaSettings />

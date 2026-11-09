@@ -1,6 +1,6 @@
 'use server';
 
-import { Notifier } from '@bourse/providers';
+import { Notifier, type Channel } from '@bourse/providers';
 import { revalidatePath } from 'next/cache';
 import { dbErrorMessage } from '@/lib/orders';
 import { describeDelivery, parseSettingsForm } from '@/lib/settings';
@@ -32,6 +32,8 @@ export async function saveSettings(
       income_tax_rate: data.incomeTaxRate,
       benchmark_symbol: data.benchmarkSymbol,
       report_frequency: data.reportFrequency,
+      ntfy_url: data.ntfyUrl,
+      telegram_chat_id: data.telegramChatId,
     },
     { onConflict: 'user_id' },
   );
@@ -42,19 +44,27 @@ export async function saveSettings(
 }
 
 /** Envoie un message de test avec les réglages ENREGISTRÉS de l'utilisateur. */
-export async function sendTest(channel: 'discord' | 'email'): Promise<{ message: string }> {
+export async function sendTest(channel: Channel): Promise<{ message: string }> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('settings')
-    .select('discord_webhook_url, email')
+    .select('discord_webhook_url, email, ntfy_url, telegram_chat_id')
     .maybeSingle();
 
   const notifier = new Notifier({
     resendApiKey: process.env.RESEND_API_KEY || null,
     emailFrom: process.env.EMAIL_FROM || 'Bourse Tracker <onboarding@resend.dev>',
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || null,
   });
   const delivery = await notifier.notify(
-    data ? { discordWebhookUrl: data.discord_webhook_url, email: data.email } : null,
+    data
+      ? {
+          discordWebhookUrl: data.discord_webhook_url,
+          email: data.email,
+          ntfyUrl: data.ntfy_url,
+          telegramChatId: data.telegram_chat_id,
+        }
+      : null,
     [channel],
     {
       title: '✅ Test Bourse Tracker',

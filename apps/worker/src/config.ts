@@ -8,6 +8,8 @@ export interface Config {
   staleAfterMs: number;
   /** Clé EODHD : active la source de secours des cotes (sinon Yahoo seul) */
   eodhdApiKey: string | null;
+  /** Robot Telegram de l'instance (BotFather) */
+  telegramBotToken: string | null;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -26,5 +28,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     emailFrom: env.EMAIL_FROM || 'Bourse Tracker <onboarding@resend.dev>',
     staleAfterMs: Number(env.STALE_AFTER_MS ?? 5 * 60_000),
     eodhdApiKey: env.EODHD_API_KEY || null,
+    telegramBotToken: env.TELEGRAM_BOT_TOKEN || null,
   };
 }

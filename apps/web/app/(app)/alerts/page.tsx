@@ -1,4 +1,5 @@
 import { alertUnit, describeCondition } from '@bourse/core';
+import { CHANNEL_NAMES } from '@/lib/settings';
 import Link from 'next/link';
 import { dateTime, eur, pct } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
@@ -12,7 +13,7 @@ const STATUS = {
   paused: { label: 'En pause', cls: 'text-slate-500' },
 } as const;
 
-const CHANNEL_LABEL: Record<string, string> = { discord: 'Discord', email: 'Email' };
+const CHANNEL_LABEL = CHANNEL_NAMES;
 
 function deliveryText(delivery: unknown): string {
   if (!delivery || typeof delivery !== 'object') return '';

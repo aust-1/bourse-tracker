@@ -4,13 +4,11 @@ import { isPortfolioAlert, type AlertType } from '@bourse/core';
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { createAlert, type AlertFormState } from '@/app/(app)/alerts/actions';
-import { ALERT_TYPES, alertTypeInfo, REARM_CHOICES } from '@/lib/alerts';
+import { ALERT_TYPES, alertTypeInfo, CHANNELS, REARM_CHOICES, type Channel } from '@/lib/alerts';
+import { CHANNEL_NAMES } from '@/lib/settings';
 import { InstrumentPicker } from './instrument-picker';
 
-export interface ChannelStatus {
-  discord: boolean;
-  email: boolean;
-}
+export type ChannelStatus = Record<Channel, boolean>;
 
 export function AlertForm({
   defaultSymbol = '',
@@ -24,10 +22,12 @@ export function AlertForm({
   const [state, action, pending] = useActionState<AlertFormState, FormData>(createAlert, {});
   const [type, setType] = useState<AlertType>('price_above');
   const unit = alertTypeInfo(type).unit === 'eur' ? '€' : '%';
-  // après une erreur, on restitue les canaux cochés ; sinon tous cochés par défaut
-  const wants = (c: string) =>
-    state.values ? state.values.channels?.split(',').includes(c) : true;
-  const nothingConfigured = !configured.discord && !configured.email;
+  // après une erreur, on restitue les canaux cochés ; sinon Discord, email et les canaux configurés
+  const wants = (c: Channel) =>
+    state.values
+      ? state.values.channels?.split(',').includes(c)
+      : c === 'discord' || c === 'email' || configured[c];
+  const nothingConfigured = !CHANNELS.some((c) => configured[c]);
 
   return (
     <form action={action} className="card flex max-w-xl flex-col gap-4">
@@ -104,21 +104,13 @@ export function AlertForm({
 
       <fieldset className="flex flex-col gap-2 text-sm">
         <legend className="mb-1">Me prévenir par</legend>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="channels"
-            value="discord"
-            defaultChecked={wants('discord')}
-          />{' '}
-          Discord
-          {!configured.discord && <span className="text-xs text-amber-600">(non configuré)</span>}
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="channels" value="email" defaultChecked={wants('email')} />{' '}
-          Email
-          {!configured.email && <span className="text-xs text-amber-600">(non configuré)</span>}
-        </label>
+        {CHANNELS.map((c) => (
+          <label key={c} className="flex items-center gap-2">
+            <input type="checkbox" name="channels" value={c} defaultChecked={wants(c)} />{' '}
+            {CHANNEL_NAMES[c]}
+            {!configured[c] && <span className="text-xs text-amber-600">(non configuré)</span>}
+          </label>
+        ))}
         {nothingConfigured && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
             Aucun canal n&apos;est configuré : l&apos;alerte sera consignée dans l&apos;historique

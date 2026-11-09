@@ -1,4 +1,4 @@
-import { isDiscordWebhook } from '@bourse/providers';
+import { isDiscordWebhook, isNtfyUrl, isTelegramChatId } from '@bourse/providers';
 import { z } from 'zod';
 
 /** Le résumé part à partir de l'heure choisie ; le worker travaille jusqu'à 23 h. */
@@ -55,6 +55,14 @@ export const settingsSchema = z.object({
       (v) => v === null || /^[\^A-Za-z0-9.=-]{1,20}$/.test(v),
       'Indice de référence : symbole Yahoo invalide (ex. ^FCHI, CW8.PA)',
     ),
+  ntfyUrl: z
+    .string()
+    .transform(blankToNull)
+    .refine((v) => v === null || isNtfyUrl(v), 'Sujet ntfy invalide (https://ntfy.sh/mon-sujet)'),
+  telegramChatId: z
+    .string()
+    .transform(blankToNull)
+    .refine((v) => v === null || isTelegramChatId(v), 'Identifiant Telegram invalide (chiffres)'),
   reportFrequency: z
     .enum(['', 'weekly', 'monthly'], { error: 'Fréquence de rapport invalide' })
     .transform((v) => (v === '' ? null : v)),
@@ -72,14 +80,23 @@ export function parseSettingsForm(formData: FormData): { data?: SettingsInput; e
     incomeTaxRate: String(formData.get('incomeTaxRate') ?? ''),
     benchmarkSymbol: String(formData.get('benchmarkSymbol') ?? ''),
     reportFrequency: String(formData.get('reportFrequency') ?? ''),
+    ntfyUrl: String(formData.get('ntfyUrl') ?? ''),
+    telegramChatId: String(formData.get('telegramChatId') ?? ''),
   });
   if (parsed.success) return { data: parsed.data };
   return { error: parsed.error.issues[0]?.message ?? 'Saisie invalide' };
 }
 
+export const CHANNEL_NAMES: Record<string, string> = {
+  discord: 'Discord',
+  email: 'Email',
+  ntfy: 'ntfy',
+  telegram: 'Telegram',
+};
+
 /** Message lisible pour le statut d'envoi d'un canal (bouton « envoyer un test »). */
 export function describeDelivery(channel: string, status: string | undefined): string {
-  const name = channel === 'discord' ? 'Discord' : 'Email';
+  const name = CHANNEL_NAMES[channel] ?? channel;
   if (status === 'sent') return `${name} : message de test envoyé ✔`;
   if (status === 'not_configured')
     return `${name} : non configuré (enregistre d'abord tes réglages)`;

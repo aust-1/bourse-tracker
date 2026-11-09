@@ -428,10 +428,12 @@ export type Database = {
           income_tax_rate: number;
           last_report_on: string | null;
           last_summary_on: string | null;
+          ntfy_url: string | null;
           report_frequency: string | null;
           social_tax_rate: number;
           summary_enabled: boolean;
           summary_time: string;
+          telegram_chat_id: string | null;
           user_id: string;
         };
         Insert: {
@@ -441,10 +443,12 @@ export type Database = {
           income_tax_rate?: number;
           last_report_on?: string | null;
           last_summary_on?: string | null;
+          ntfy_url?: string | null;
           report_frequency?: string | null;
           social_tax_rate?: number;
           summary_enabled?: boolean;
           summary_time?: string;
+          telegram_chat_id?: string | null;
           user_id?: string;
         };
         Update: {
@@ -454,10 +458,12 @@ export type Database = {
           income_tax_rate?: number;
           last_report_on?: string | null;
           last_summary_on?: string | null;
+          ntfy_url?: string | null;
           report_frequency?: string | null;
           social_tax_rate?: number;
           summary_enabled?: boolean;
           summary_time?: string;
+          telegram_chat_id?: string | null;
           user_id?: string;
         };
         Relationships: [];

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@bourse/db';
 import {
+  ALL_CHANNELS,
   EodhdProvider,
   FallbackProvider,
   Notifier,
@@ -27,12 +28,16 @@ const provider: PriceProvider = config.eodhdApiKey
       onSwitch: (to, reason) => log.warn('source de prix basculée', { to, reason }),
     })
   : new YahooProvider();
-const notifier = new Notifier({ resendApiKey: config.resendApiKey, emailFrom: config.emailFrom });
+const notifier = new Notifier({
+  resendApiKey: config.resendApiKey,
+  emailFrom: config.emailFrom,
+  telegramBotToken: config.telegramBotToken,
+});
 
 /** Message système (panne de la source de prix…) : envoyé aux administrateurs, sur tous leurs canaux. */
 async function notifyAll(message: Message) {
   for (const s of await store.listAdminSettings()) {
-    await notifier.notify(s, ['discord', 'email'], message);
+    await notifier.notify(s, ALL_CHANNELS, message);
   }
 }
 

@@ -42,11 +42,13 @@ Dans le tableau de bord Supabase :
 
 ## 2. Services externes
 
-| Service         | À faire                                                                                                  | Variable                |
-| --------------- | -------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Discord         | Salon → Modifier → Intégrations → Webhooks → Nouveau → Copier l'URL (à coller dans **Réglages** du site) | —                       |
-| Resend          | Créer un compte, générer une clé API                                                                     | `RESEND_API_KEY`        |
-| Healthchecks.io | Créer un check « worker » : période 1 min, délai de grâce 5 min ; ajouter ton email en canal             | `HEALTHCHECKS_PING_URL` |
+| Service         | À faire                                                                                                         | Variable                |
+| --------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Discord         | Salon → Modifier → Intégrations → Webhooks → Nouveau → Copier l'URL (à coller dans **Réglages** du site)        | —                       |
+| Resend          | Créer un compte, générer une clé API                                                                            | `RESEND_API_KEY`        |
+| Healthchecks.io | Créer un check « worker » : période 1 min, délai de grâce 5 min ; ajouter ton email en canal                    | `HEALTHCHECKS_PING_URL` |
+| ntfy            | Rien côté serveur : chacun choisit un sujet (https://ntfy.sh/…) dans **Réglages** et l'ouvre dans l'app ntfy    | —                       |
+| Telegram        | Facultatif : créer un robot avec @BotFather, copier son jeton ; chacun saisit son identifiant dans **Réglages** | `TELEGRAM_BOT_TOKEN`    |
 
 Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte Resend : les alertes par email ne
 partiront que vers toi. Pour que les personnes invitées reçoivent aussi leurs emails, vérifie un domaine

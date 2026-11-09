@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react';
 import { saveSettings, sendTest, type SettingsState } from '@/app/(app)/settings/actions';
+import type { Channel } from '@bourse/providers';
 import { BENCHMARK_SUGGESTIONS } from '@/lib/benchmark-suggestions';
 import { SUMMARY_MAX, SUMMARY_MIN } from '@/lib/settings';
 
@@ -14,9 +15,11 @@ export interface SettingsValues {
   incomeTaxRate: string;
   benchmarkSymbol: string;
   reportFrequency: string;
+  ntfyUrl: string;
+  telegramChatId: string;
 }
 
-function TestButton({ channel, label }: { channel: 'discord' | 'email'; label: string }) {
+function TestButton({ channel, label }: { channel: Channel; label: string }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<string | null>(null);
   return (
@@ -42,7 +45,13 @@ function TestButton({ channel, label }: { channel: 'discord' | 'email'; label: s
   );
 }
 
-export function SettingsForm({ values }: { values: SettingsValues }) {
+export function SettingsForm({
+  values,
+  telegramAvailable = false,
+}: {
+  values: SettingsValues;
+  telegramAvailable?: boolean;
+}) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(saveSettings, {});
   const v = state.values;
   return (
@@ -72,6 +81,37 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
             className="input"
           />
         </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Sujet ntfy (notifications sur le téléphone)
+          <input
+            name="ntfyUrl"
+            type="url"
+            defaultValue={v?.ntfyUrl ?? values.ntfyUrl}
+            placeholder="https://ntfy.sh/un-nom-difficile-a-deviner"
+            className="input"
+          />
+          <span className="text-xs text-slate-500">
+            Installe l’application ntfy et abonne-toi à ce sujet. Quiconque connaît le nom lit les
+            messages : choisis-le long et aléatoire.
+          </span>
+        </label>
+
+        {telegramAvailable && (
+          <label className="flex flex-col gap-1 text-sm">
+            Identifiant Telegram
+            <input
+              name="telegramChatId"
+              inputMode="numeric"
+              defaultValue={v?.telegramChatId ?? values.telegramChatId}
+              placeholder="123456789"
+              className="input"
+            />
+            <span className="text-xs text-slate-500">
+              Écris d’abord au robot de l’instance, puis demande ton identifiant à @userinfobot.
+            </span>
+          </label>
+        )}
 
         <fieldset className="flex flex-col gap-2 text-sm">
           <legend className="mb-1">Résumé quotidien</legend>
@@ -193,6 +233,8 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
         </p>
         <TestButton channel="discord" label="Envoyer un test Discord" />
         <TestButton channel="email" label="Envoyer un test email" />
+        <TestButton channel="ntfy" label="Envoyer un test ntfy" />
+        {telegramAvailable && <TestButton channel="telegram" label="Envoyer un test Telegram" />}
       </section>
     </div>
   );

@@ -14,7 +14,7 @@ import {
   type Order,
   type ReportPeriod,
 } from '@bourse/core';
-import { allFailed, type Message, type Notifier } from '@bourse/providers';
+import { ALL_CHANNELS, allFailed, type Message, type Notifier } from '@bourse/providers';
 import type { Logger } from './log';
 import type { AlertEventRow, Store } from './store';
 import { timeToMinutes } from './summary';
@@ -179,7 +179,7 @@ export async function sendPeriodicReports({
         events: await store.listAlertEventsSince(s.userId, parisDayStart(nextTradingDay(baseDay))),
       };
       const message = reportMessage(input, reportFigures(input));
-      const delivery = await notifier.notify(s, ['discord', 'email'], message);
+      const delivery = await notifier.notify(s, ALL_CHANNELS, message);
       if (allFailed(delivery)) {
         log.warn('rapport non envoyé, nouvelle tentative au prochain cycle', { delivery });
         continue;

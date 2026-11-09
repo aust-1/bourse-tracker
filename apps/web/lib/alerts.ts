@@ -67,7 +67,7 @@ export const toStoredThreshold = (type: AlertType, magnitude: number) =>
 /** Seuil stocké → valeur positive affichée dans le formulaire. */
 export const toMagnitude = (type: AlertType, stored: number) => Math.abs(stored);
 
-export const CHANNELS = ['discord', 'email'] as const;
+export const CHANNELS = ['discord', 'email', 'ntfy', 'telegram'] as const;
 export type Channel = (typeof CHANNELS)[number];
 
 export const alertSchema = z

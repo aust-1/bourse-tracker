@@ -309,6 +309,8 @@ export class SupabaseStore implements Store {
       lastSummaryOn: r.last_summary_on,
       reportFrequency: r.report_frequency as UserSettings['reportFrequency'],
       lastReportOn: r.last_report_on,
+      ntfyUrl: r.ntfy_url,
+      telegramChatId: r.telegram_chat_id,
     };
   }
 

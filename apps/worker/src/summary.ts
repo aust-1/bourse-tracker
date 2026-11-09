@@ -9,7 +9,7 @@ import {
   isWorkWindow,
   type PortfolioView,
 } from '@bourse/core';
-import { allFailed, type Message, type Notifier } from '@bourse/providers';
+import { ALL_CHANNELS, allFailed, type Message, type Notifier } from '@bourse/providers';
 import type { Logger } from './log';
 import type { AlertEventRow, Store } from './store';
 
@@ -117,11 +117,7 @@ export async function sendDailySummaries({
         ),
       );
       const events = await store.listAlertEventsSince(s.userId, parisDayStart(day));
-      const delivery = await notifier.notify(
-        s,
-        ['discord', 'email'],
-        summaryMessage(day, view, events),
-      );
+      const delivery = await notifier.notify(s, ALL_CHANNELS, summaryMessage(day, view, events));
 
       if (allFailed(delivery)) {
         log.warn('résumé non envoyé, nouvelle tentative au prochain cycle', { delivery });

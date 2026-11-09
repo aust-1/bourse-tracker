@@ -8,7 +8,15 @@ export interface Message {
 export interface NotifyTarget {
   discordWebhookUrl: string | null;
   email: string | null;
+  /** Sujet ntfy complet : https://ntfy.sh/mon-sujet (ou serveur auto-hébergé) */
+  ntfyUrl?: string | null;
+  /** Identifiant de conversation Telegram avec le robot de l'instance */
+  telegramChatId?: string | null;
 }
+
+/** Tous les canaux : messages système, résumé et rapports partent sur ceux qui sont configurés. */
+export const ALL_CHANNELS = ['discord', 'email', 'ntfy', 'telegram'] as const;
+export type Channel = (typeof ALL_CHANNELS)[number];
 
 export type DeliveryStatus = 'sent' | 'not_configured' | `error: ${string}`;
 export type Delivery = Record<string, DeliveryStatus>;
@@ -28,11 +36,26 @@ export function isDiscordWebhook(raw: string): boolean {
   }
 }
 
+/** Sujet ntfy : https, un seul segment de chemin (le nom du sujet). */
+export function isNtfyUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return u.protocol === 'https:' && /^\/[A-Za-z0-9_-]{1,64}$/.test(u.pathname) && !u.search;
+  } catch {
+    return false;
+  }
+}
+
+/** Identifiant de conversation Telegram (négatif pour un groupe). */
+export const isTelegramChatId = (raw: string) => /^-?\d{1,20}$/.test(raw);
+
 const COLORS = { info: 0x2a78d6, warning: 0xeda100, success: 0x1baf7a } as const;
 
 export interface NotifierConfig {
   resendApiKey: string | null;
   emailFrom: string;
+  /** Robot Telegram de l'instance (BotFather) ; null : canal indisponible */
+  telegramBotToken?: string | null;
   fetch?: typeof fetch;
 }
 
@@ -82,6 +105,43 @@ export class Notifier {
     if (!res.ok) throw new Error(`Resend HTTP ${res.status}`);
   }
 
+  async sendNtfy(topicUrl: string, msg: Message): Promise<void> {
+    if (!isNtfyUrl(topicUrl)) throw new Error('URL ntfy invalide');
+    const u = new URL(topicUrl);
+    // publication JSON : titre et texte en UTF-8 (un en-tête HTTP ne porte pas les accents)
+    const res = await this.fetchImpl(`${u.origin}/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: u.pathname.slice(1),
+        title: msg.title,
+        message: msg.body,
+        tags: [msg.level === 'warning' ? 'warning' : 'chart_with_upwards_trend'],
+        priority: msg.level === 'warning' ? 4 : 3,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`ntfy HTTP ${res.status}`);
+  }
+
+  async sendTelegram(chatId: string, msg: Message): Promise<void> {
+    if (!this.cfg.telegramBotToken) throw new Error('robot Telegram absent');
+    if (!isTelegramChatId(chatId)) throw new Error('identifiant Telegram invalide');
+    const res = await this.fetchImpl(
+      `https://api.telegram.org/bot${this.cfg.telegramBotToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: [msg.title, '', msg.body].join('\n').slice(0, 4096),
+        }),
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    if (!res.ok) throw new Error(`Telegram HTTP ${res.status}`);
+  }
+
   /** Envoie sur les canaux demandés ; ne lève jamais, rapporte l'état de chaque canal. */
   async notify(
     settings: NotifyTarget | null,
@@ -103,6 +163,18 @@ export class Notifier {
             continue;
           }
           await this.sendEmail(settings.email, msg);
+        } else if (channel === 'ntfy') {
+          if (!settings?.ntfyUrl) {
+            delivery.ntfy = 'not_configured';
+            continue;
+          }
+          await this.sendNtfy(settings.ntfyUrl, msg);
+        } else if (channel === 'telegram') {
+          if (!settings?.telegramChatId || !this.cfg.telegramBotToken) {
+            delivery.telegram = 'not_configured';
+            continue;
+          }
+          await this.sendTelegram(settings.telegramChatId, msg);
         } else {
           continue;
         }

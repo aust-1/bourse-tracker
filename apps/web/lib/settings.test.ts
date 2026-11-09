@@ -25,6 +25,8 @@ describe('parseSettingsForm', () => {
       incomeTaxRate: 12.8,
       benchmarkSymbol: null,
       reportFrequency: null,
+      ntfyUrl: null,
+      telegramChatId: null,
     });
   });
 
@@ -39,6 +41,8 @@ describe('parseSettingsForm', () => {
       incomeTaxRate: 12.8,
       benchmarkSymbol: null,
       reportFrequency: null,
+      ntfyUrl: null,
+      telegramChatId: null,
     });
   });
 
@@ -51,6 +55,8 @@ describe('parseSettingsForm', () => {
     [{ summaryTime: '18h' }, /Heure/],
     [{ socialTaxRate: '150' }, /Prélèvements sociaux : pourcentage/],
     [{ incomeTaxRate: 'abc' }, /Impôt sur le revenu : pourcentage/],
+    [{ ntfyUrl: 'http://ntfy.sh/x' }, /ntfy/],
+    [{ telegramChatId: '@moi' }, /Telegram/],
   ])('rejette %j', (patch, msg) => {
     const r = parseSettingsForm(form({ ...valid, ...patch }));
     expect(r.data).toBeUndefined();

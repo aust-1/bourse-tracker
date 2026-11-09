@@ -42,6 +42,8 @@ export interface UserSettings {
   /** Rapport périodique : hebdomadaire, mensuel ou aucun */
   reportFrequency?: 'weekly' | 'monthly' | null;
   lastReportOn?: string | null;
+  ntfyUrl?: string | null;
+  telegramChatId?: string | null;
 }
 
 /** Accès aux données du worker : implémenté par Supabase (prod) et en mémoire (tests). */
