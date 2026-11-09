@@ -30,6 +30,7 @@ describe('routeAccess', () => {
     ['/signup', 'guest'],
     ['/forgot', 'guest'],
     ['/auth/confirm', 'open'],
+    ['/manifest.webmanifest', 'open'],
     ['/', 'private'],
     ['/settings/password', 'private'],
     ['/loginx', 'private'],

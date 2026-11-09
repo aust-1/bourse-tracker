@@ -31,14 +31,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="mx-auto max-w-6xl pb-16">
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-phosphor px-4 py-2 font-semibold text-tube">
         <span>BOURSE.SYS</span>
-        <nav className="flex flex-1 flex-wrap gap-x-5 gap-y-1 text-sm">
+        <nav className="order-last flex basis-full flex-wrap gap-x-4 gap-y-1 text-sm sm:order-none sm:flex-1 sm:basis-auto sm:gap-x-5">
           {nav.map((l, i) => (
             <Link
               key={l.href}
               href={l.href}
               className="text-tube hover:bg-tube hover:text-phosphor"
             >
-              [F{i + 1}] {l.label.toLowerCase()}
+              <span className="hidden sm:inline">[F{i + 1}] </span>
+              {l.label.toLowerCase()}
             </Link>
           ))}
         </nav>

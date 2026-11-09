@@ -66,4 +66,4 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 ## 8. Mobile
 
-- [ ] **17 — PWA** : manifeste, icônes, installable ; tableau de bord lisible sur téléphone.
+- [x] **17 — PWA** : manifeste, icônes, installable ; tableau de bord lisible sur téléphone.

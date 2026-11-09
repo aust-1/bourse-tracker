@@ -42,6 +42,7 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
 - **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
   Healthchecks.io du worker, page « Supervision » (administrateur) : état du worker, échecs de cotation,
   fraîcheur de chaque cote.
+- **Application mobile** : installable (PWA : manifeste, icônes), menu compact sur téléphone.
 - **Comptes** : le premier compte est administrateur et crée des liens d'invitation (un compte par lien,
   7 jours). La base refuse toute inscription sans invitation valide. L'administrateur voit tous les
   comptes et peut en désactiver un (connexion refusée, plus d'alertes ni de résumé).

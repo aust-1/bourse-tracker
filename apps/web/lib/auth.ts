@@ -11,8 +11,8 @@ export function safeNext(next: string | null | undefined, fallback = '/'): strin
 
 /** Pages réservées aux visiteurs non connectés (un compte connecté est renvoyé à l'accueil). */
 const GUEST_ONLY = ['/login', '/signup', '/forgot'];
-/** Pages ouvertes à tous : retour des liens reçus par email (connecté ou non). */
-const OPEN = ['/auth/'];
+/** Pages ouvertes à tous (connecté ou non) : retour des liens reçus par email, manifeste PWA. */
+const OPEN = ['/auth/', '/manifest.webmanifest'];
 
 /** Vrai si le compte a un second facteur vérifié que la session n'a pas encore présenté. */
 export function needsSecondFactor(

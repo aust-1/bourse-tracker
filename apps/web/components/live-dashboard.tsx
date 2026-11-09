@@ -218,7 +218,7 @@ export function LiveDashboard(props: {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {rows.map((r) => (
               <tr key={r.instrumentId}>
-                <td className="td">
+                <td className="td min-w-44">
                   <Link
                     href={`/instruments/${r.instrumentId}`}
                     className="font-medium underline-offset-2 hover:underline"
