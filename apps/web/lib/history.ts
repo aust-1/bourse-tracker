@@ -1,5 +1,6 @@
 import { buildSnapshots, parisDate, periodCashFlows, twr, xirr, type Snapshot } from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
+import { cachedCloses } from './closes-cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CashMovement, IncomeFlow, OrderRow, QuoteRow } from '@bourse/core';
 
@@ -167,11 +168,23 @@ function spanDays(from: string, to: string): number {
 
 type Client = SupabaseClient<Database>;
 
+/**
+ * Clôtures des instruments, en cache tant que la version des données de marché ne change pas
+ * (voir lib/closes-cache.ts) : l'historique d'un portefeuille ancien compte des milliers de lignes.
+ */
 export async function loadCloses(
   supabase: Client,
   instrumentIds: readonly string[],
 ): Promise<CloseRow[]> {
   if (instrumentIds.length === 0) return [];
+  const { data } = await supabase.from('market_data_version').select('version').maybeSingle();
+  return cachedCloses(instrumentIds, data?.version ?? null, (ids) => fetchCloses(supabase, ids));
+}
+
+async function fetchCloses(
+  supabase: Client,
+  instrumentIds: readonly string[],
+): Promise<CloseRow[]> {
   const rows = await fetchAll((from, to) =>
     supabase
       .from('price_history')

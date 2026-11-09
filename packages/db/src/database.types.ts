@@ -224,6 +224,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      market_data_version: {
+        Row: {
+          id: number;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          id?: number;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          id?: number;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [];
+      };
       orders: {
         Row: {
           created_at: string;

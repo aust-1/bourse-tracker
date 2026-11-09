@@ -36,8 +36,9 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 - [x] **4 — TWR et TRI (XIRR)** : rendement pondéré par le temps et TRI annualisé sur l'historique.
 - [x] **11 — Indice de référence** : comparaison de la courbe à un indice ou ETF choisi.
-- [ ] **24 — Cache de l'historique** : séries calculées mises en cache, invalidées à chaque
-      modification d'ordre ou de mouvement.
+- [x] **24 — Cache de l'historique** : clôtures (le coût principal) gardées en cache, invalidées par
+      une version des données de marché incrémentée par la base ; ordres et mouvements relus à
+      chaque affichage, donc toujours à jour.
 
 ## 5. Instruments et source de prix
 
