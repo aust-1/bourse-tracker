@@ -7,7 +7,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
 ## Fonctionnalités
 
 - **Ordres** : saisie manuelle (achat/vente, quantité, prix, frais, date-heure de Paris), modification,
-  suppression, filtres (titre, sens, dates), totaux de la sélection, pagination, export CSV. Une vente à
+  suppression, filtres (titre, sens, dates), totaux de la sélection, pagination, export et **import CSV**
+  (aperçu ligne par ligne, doublons ignorés, tout ou rien). Une vente à
   découvert est refusée **par la base** elle-même.
 - **Portefeuilles** : plusieurs enveloppes par compte (PEA, PEA-PME, compte-titres) ; chaque ordre
   appartient à un portefeuille, la vente à découvert est contrôlée portefeuille par portefeuille et un

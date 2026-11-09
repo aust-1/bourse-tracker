@@ -75,7 +75,7 @@ describe('ordersToCsv', () => {
         portfolio: 'PEA',
       },
     ]);
-    expect(csv.startsWith('﻿date;symbole')).toBe(true);
+    expect(csv.startsWith('\uFEFFdate;symbole')).toBe(true);
     expect(csv).toContain('"Amundi; ""World"""');
     expect(csv).toContain('"\'=HYPERLINK(""x"")"');
     expect(csv).toContain(';achat;10;100.5;1.25;');

@@ -15,7 +15,9 @@ import { createClient } from '@/lib/supabase/server';
 type Search = Promise<Record<string, string | undefined>>;
 
 export default async function OrdersPage({ searchParams }: { searchParams: Search }) {
-  const filters = parseFilters(await searchParams);
+  const params = await searchParams;
+  const filters = parseFilters(params);
+  const imported = Number(params.imported) || 0;
   const { gte, lt } = dateBounds(filters);
   const supabase = await createClient();
   const { portfolios, selected } = await portfolioScope(supabase);
@@ -63,6 +65,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
           {selected && <p className="text-sm text-slate-500">{selected.name}</p>}
         </div>
         <div className="flex gap-2">
+          <Link href="/orders/import" className="btn-secondary">
+            Import CSV
+          </Link>
           <a href="/orders/export" className="btn-secondary">
             Export CSV
           </a>
@@ -111,6 +116,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
           </Link>
         )}
       </form>
+
+      {imported > 0 && (
+        <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+          {imported} ordre{imported > 1 ? 's' : ''} importé{imported > 1 ? 's' : ''}.
+        </p>
+      )}
 
       {load.error && <p className="text-sm text-red-600">Erreur de chargement : {load.error}</p>}
 

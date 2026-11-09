@@ -95,5 +95,5 @@ export function ordersToCsv(rows: readonly CsvOrder[]): string {
       .map(csvCell)
       .join(';'),
   );
-  return '﻿' + [header.join(';'), ...lines].join('\r\n') + '\r\n';
+  return '\uFEFF' + [header.join(';'), ...lines].join('\r\n') + '\r\n';
 }

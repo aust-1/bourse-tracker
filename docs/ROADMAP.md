@@ -54,7 +54,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 - [x] **10 — Répartition** : graphique des poids par ligne et par type (ETF / action).
 - [x] **15 — Fiche instrument** : PRU sur le graphique (déjà en place), performance totale de la ligne
       (latent + réalisé + dividendes), dividendes reçus.
-- [ ] **9 — Import CSV** : import d'ordres depuis un CSV (format de l'export + formats courtiers
+- [x] **9 — Import CSV** : import d'ordres depuis un CSV (format de l'export + formats courtiers
       courants), avec aperçu avant validation.
 
 ## 7. Alertes et notifications
