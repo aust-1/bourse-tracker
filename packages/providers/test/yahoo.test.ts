@@ -142,6 +142,18 @@ describe('YahooProvider', () => {
     ]);
   });
 
+  it('getDailyCloses max : bornes explicites (range=max donnerait des barres mensuelles)', async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request) => ok(chartDaily));
+    await new YahooProvider({ fetch }).getDailyCloses('CW8.PA', 'max');
+    const url = String(fetch.mock.calls[0]![0]);
+    expect(url).toMatch(/period1=0&period2=\d+&interval=1d/);
+    expect(url).not.toContain('range=');
+
+    fetch.mockClear();
+    await new YahooProvider({ fetch }).getDailyCloses('CW8.PA', '1y');
+    expect(String(fetch.mock.calls[0]![0])).toContain('range=1y&interval=1d');
+  });
+
   it('search : garde ETF/actions européens, écarte fonds et places non européennes', async () => {
     const fetch = vi.fn().mockResolvedValue(ok(search));
     const hits = await new YahooProvider({ fetch }).search('amundi msci world');
