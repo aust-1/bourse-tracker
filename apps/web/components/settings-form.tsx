@@ -13,6 +13,7 @@ export interface SettingsValues {
   socialTaxRate: string;
   incomeTaxRate: string;
   benchmarkSymbol: string;
+  reportFrequency: string;
 }
 
 function TestButton({ channel, label }: { channel: 'discord' | 'email'; label: string }) {
@@ -97,6 +98,23 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
               (entre {SUMMARY_MIN} et {SUMMARY_MAX}, heure de Paris)
             </span>
           </label>
+          <label className="flex items-center gap-2">
+            Rapport périodique
+            <select
+              name="reportFrequency"
+              key={v?.reportFrequency ?? values.reportFrequency}
+              defaultValue={v?.reportFrequency ?? values.reportFrequency}
+              className="input w-auto"
+            >
+              <option value="">Aucun</option>
+              <option value="weekly">Chaque semaine</option>
+              <option value="monthly">Chaque mois</option>
+            </select>
+          </label>
+          <span className="text-xs text-slate-500">
+            Envoyé le dernier jour de bourse de la semaine ou du mois, à l’heure du résumé : gain
+            hors apports, rendement, meilleure et pire ligne, alertes.
+          </span>
         </fieldset>
 
         <fieldset className="flex flex-col gap-2 text-sm">

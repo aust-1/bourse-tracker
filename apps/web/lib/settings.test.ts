@@ -24,6 +24,7 @@ describe('parseSettingsForm', () => {
       socialTaxRate: 17.2,
       incomeTaxRate: 12.8,
       benchmarkSymbol: null,
+      reportFrequency: null,
     });
   });
 
@@ -37,6 +38,7 @@ describe('parseSettingsForm', () => {
       socialTaxRate: 17.2,
       incomeTaxRate: 12.8,
       benchmarkSymbol: null,
+      reportFrequency: null,
     });
   });
 

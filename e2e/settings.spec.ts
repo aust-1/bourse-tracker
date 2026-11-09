@@ -33,6 +33,7 @@ test('réglages : enregistrement, validation, persistance et tests non configur�
   await page.getByLabel('Adresse email').fill('moi@example.com');
   await page.getByLabel('À partir de').fill('18:10');
   await page.getByLabel(/Indice de référence/).fill('^FCHI');
+  await page.getByLabel('Rapport périodique').selectOption('monthly');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(page.getByText('Réglages enregistrés.')).toBeVisible();
 
@@ -43,6 +44,7 @@ test('réglages : enregistrement, validation, persistance et tests non configur�
     summary_enabled: true,
     summary_time: '18:10:00',
     benchmark_symbol: '^FCHI',
+    report_frequency: 'monthly',
   });
 
   // persistance après rechargement

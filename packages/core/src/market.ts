@@ -171,3 +171,43 @@ export function toParisLocal(at: Date | string): string {
   const p = parts(new Date(at));
   return `${p.y}-${pad(p.m)}-${pad(p.d)}T${pad(p.h)}:${pad(p.min)}`;
 }
+
+/** Jour de bourse suivant `day` (YYYY-MM-DD). */
+export function nextTradingDay(day: string): string {
+  let d = shiftDay(day, 1);
+  while (!isTradingDay(d)) d = shiftDay(d, 1);
+  return d;
+}
+
+/** Jour de bourse précédant `day`. */
+export function previousTradingDay(day: string): string {
+  let d = shiftDay(day, -1);
+  while (!isTradingDay(d)) d = shiftDay(d, -1);
+  return d;
+}
+
+/** Lundi de la semaine de `day` (YYYY-MM-DD). */
+function weekStart(day: string): string {
+  const wd = new Date(`${day}T12:00:00Z`).getUTCDay();
+  return shiftDay(day, -((wd + 6) % 7));
+}
+
+export type ReportPeriod = 'weekly' | 'monthly';
+
+/** Vrai si `day` est le dernier jour de bourse de sa semaine (ou de son mois). */
+export function isLastTradingDayOf(period: ReportPeriod, day: string): boolean {
+  if (!isTradingDay(day)) return false;
+  const next = nextTradingDay(day);
+  return period === 'weekly'
+    ? weekStart(next) !== weekStart(day)
+    : next.slice(0, 7) !== day.slice(0, 7);
+}
+
+/** Dernier jour de bourse de la période précédente : base de comparaison d'un rapport. */
+export function previousPeriodEnd(period: ReportPeriod, day: string): string {
+  let d = previousTradingDay(day);
+  const same = (a: string) =>
+    period === 'weekly' ? weekStart(a) === weekStart(day) : a.slice(0, 7) === day.slice(0, 7);
+  while (same(d)) d = previousTradingDay(d);
+  return d;
+}

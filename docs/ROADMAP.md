@@ -61,7 +61,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 - [x] **12 — Alertes plus riches** : réarmement automatique avec délai, baisse depuis le plus haut,
       alertes sur le portefeuille entier, note libre.
-- [ ] **13 — Rapport hebdomadaire / mensuel** en plus du résumé quotidien.
+- [x] **13 — Rapport hebdomadaire / mensuel** en plus du résumé quotidien.
 - [ ] **16 — Autres canaux** : ntfy (push mobile) et Telegram.
 
 ## 8. Mobile

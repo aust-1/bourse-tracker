@@ -29,6 +29,7 @@ export default async function SettingsPage() {
           socialTaxRate: String(data?.social_tax_rate ?? DEFAULT_SOCIAL_RATE),
           incomeTaxRate: String(data?.income_tax_rate ?? DEFAULT_INCOME_RATE),
           benchmarkSymbol: data?.benchmark_symbol ?? '',
+          reportFrequency: data?.report_frequency ?? '',
         }}
       />
       <MfaSettings />

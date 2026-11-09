@@ -39,6 +39,9 @@ export interface UserSettings {
   summaryEnabled: boolean;
   summaryTime: string;
   lastSummaryOn: string | null;
+  /** Rapport périodique : hebdomadaire, mensuel ou aucun */
+  reportFrequency?: 'weekly' | 'monthly' | null;
+  lastReportOn?: string | null;
 }
 
 /** Accès aux données du worker : implémenté par Supabase (prod) et en mémoire (tests). */
@@ -90,6 +93,15 @@ export interface Store {
   listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]>;
   /** Consigne l'envoi du résumé du jour (`day` = YYYY-MM-DD, Paris). */
   markSummarySent(userId: string, day: string): Promise<void>;
+  /** Consigne l'envoi du rapport périodique (jour de la fin de période). */
+  markReportSent(userId: string, day: string): Promise<void>;
+  /** Clôtures des instruments depuis `fromDate` inclus (YYYY-MM-DD). */
+  getCloses(
+    instrumentIds: readonly string[],
+    fromDate: string,
+  ): Promise<{ instrumentId: string; date: string; close: number }[]>;
+  /** Revenus d'un compte : dividendes (+) et frais hors courtage (−), datés. */
+  listIncome(userId: string): Promise<{ date: string; amount: number }[]>;
 }
 
 export interface AlertEventRow {

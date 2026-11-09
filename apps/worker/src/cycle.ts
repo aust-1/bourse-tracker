@@ -6,6 +6,7 @@ import type { Logger } from './log';
 import type { SourceMonitor } from './monitor';
 import { pollCycle, type CycleResult, type FreshQuote } from './poll';
 import type { Store } from './store';
+import { sendPeriodicReports } from './report';
 import { sendDailySummaries } from './summary';
 
 /** Hors séance, on ne vérifie les instruments ajoutés qu'à cette cadence. */
@@ -81,6 +82,7 @@ export class Cycle {
 
       await history.tick(now, quotes).catch(guarded(log, 'historique'));
       await sendDailySummaries({ store, notifier, log, now }).catch(guarded(log, 'résumé'));
+      await sendPeriodicReports({ store, notifier, log, now }).catch(guarded(log, 'rapport'));
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
       throw e;

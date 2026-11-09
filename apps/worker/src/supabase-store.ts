@@ -307,7 +307,47 @@ export class SupabaseStore implements Store {
       summaryEnabled: r.summary_enabled,
       summaryTime: r.summary_time,
       lastSummaryOn: r.last_summary_on,
+      reportFrequency: r.report_frequency as UserSettings['reportFrequency'],
+      lastReportOn: r.last_report_on,
     };
+  }
+
+  async markReportSent(userId: string, day: string): Promise<void> {
+    const { error } = await this.db
+      .from('settings')
+      .update({ last_report_on: day })
+      .eq('user_id', userId);
+    if (error) throw new Error(`consignation du rapport : ${error.message}`);
+  }
+
+  async getCloses(instrumentIds: readonly string[], fromDate: string) {
+    if (instrumentIds.length === 0) return [];
+    const rows = await fetchAll((from, to) =>
+      this.db
+        .from('price_history')
+        .select('instrument_id, date, close')
+        .in('instrument_id', [...instrumentIds])
+        .gte('date', fromDate)
+        .order('instrument_id')
+        .order('date')
+        .range(from, to),
+    );
+    return rows.map((r) => ({ instrumentId: r.instrument_id, date: r.date, close: r.close }));
+  }
+
+  async listIncome(userId: string) {
+    const rows = must(
+      await this.db
+        .from('cash_movements')
+        .select('kind, amount, occurred_on')
+        .eq('user_id', userId)
+        .in('kind', ['dividend', 'fee']),
+      'lecture des revenus',
+    );
+    return rows.map((r) => ({
+      date: r.occurred_on,
+      amount: r.kind === 'dividend' ? Number(r.amount) : -Number(r.amount),
+    }));
   }
 
   async getSettings(userId: string): Promise<UserSettings | null> {

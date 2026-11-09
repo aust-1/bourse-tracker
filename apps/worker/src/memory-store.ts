@@ -148,4 +148,25 @@ export class MemoryStore implements Store {
     const s = this.settings.find((x) => x.userId === userId);
     if (s) s.lastSummaryOn = day;
   }
+
+  reportsSent: { userId: string; day: string }[] = [];
+  income = new Map<string, { date: string; amount: number }[]>();
+
+  async markReportSent(userId: string, day: string) {
+    this.reportsSent.push({ userId, day });
+    const s = this.settings.find((x) => x.userId === userId);
+    if (s) s.lastReportOn = day;
+  }
+
+  async getCloses(instrumentIds: readonly string[], fromDate: string) {
+    return instrumentIds.flatMap((id) =>
+      (this.closes.get(id) ?? [])
+        .filter((c) => c.date >= fromDate)
+        .map((c) => ({ instrumentId: id, date: c.date, close: c.close })),
+    );
+  }
+
+  async listIncome(userId: string) {
+    return this.income.get(userId) ?? [];
+  }
 }

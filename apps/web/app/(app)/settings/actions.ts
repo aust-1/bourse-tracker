@@ -31,6 +31,7 @@ export async function saveSettings(
       social_tax_rate: data.socialTaxRate,
       income_tax_rate: data.incomeTaxRate,
       benchmark_symbol: data.benchmarkSymbol,
+      report_frequency: data.reportFrequency,
     },
     { onConflict: 'user_id' },
   );

@@ -55,6 +55,9 @@ export const settingsSchema = z.object({
       (v) => v === null || /^[\^A-Za-z0-9.=-]{1,20}$/.test(v),
       'Indice de référence : symbole Yahoo invalide (ex. ^FCHI, CW8.PA)',
     ),
+  reportFrequency: z
+    .enum(['', 'weekly', 'monthly'], { error: 'Fréquence de rapport invalide' })
+    .transform((v) => (v === '' ? null : v)),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -68,6 +71,7 @@ export function parseSettingsForm(formData: FormData): { data?: SettingsInput; e
     socialTaxRate: String(formData.get('socialTaxRate') ?? ''),
     incomeTaxRate: String(formData.get('incomeTaxRate') ?? ''),
     benchmarkSymbol: String(formData.get('benchmarkSymbol') ?? ''),
+    reportFrequency: String(formData.get('reportFrequency') ?? ''),
   });
   if (parsed.success) return { data: parsed.data };
   return { error: parsed.error.issues[0]?.message ?? 'Saisie invalide' };

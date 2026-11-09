@@ -426,7 +426,9 @@ export type Database = {
           discord_webhook_url: string | null;
           email: string | null;
           income_tax_rate: number;
+          last_report_on: string | null;
           last_summary_on: string | null;
+          report_frequency: string | null;
           social_tax_rate: number;
           summary_enabled: boolean;
           summary_time: string;
@@ -437,7 +439,9 @@ export type Database = {
           discord_webhook_url?: string | null;
           email?: string | null;
           income_tax_rate?: number;
+          last_report_on?: string | null;
           last_summary_on?: string | null;
+          report_frequency?: string | null;
           social_tax_rate?: number;
           summary_enabled?: boolean;
           summary_time?: string;
@@ -448,7 +452,9 @@ export type Database = {
           discord_webhook_url?: string | null;
           email?: string | null;
           income_tax_rate?: number;
+          last_report_on?: string | null;
           last_summary_on?: string | null;
+          report_frequency?: string | null;
           social_tax_rate?: number;
           summary_enabled?: boolean;
           summary_time?: string;

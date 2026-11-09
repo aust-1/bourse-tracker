@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isLastTradingDayOf,
+  nextTradingDay,
+  previousPeriodEnd,
+  previousTradingDay,
   closeMinutes,
   easterSunday,
   euronextHolidays,
@@ -111,5 +115,31 @@ describe('jours fériés Euronext', () => {
     expect(isMarketOpen(new Date('2026-12-24T13:10:00Z'))).toBe(false); // 14:10 Paris
     expect(isPollingWindow(new Date('2026-12-24T13:20:00Z'))).toBe(false); // 14:20 Paris
     expect(closeMinutes('2026-12-23')).toBe(17 * 60 + 30);
+  });
+});
+
+describe('fins de période', () => {
+  it('jour de bourse suivant / précédent (week-end, Pâques)', () => {
+    expect(nextTradingDay('2026-09-25')).toBe('2026-09-28');
+    expect(nextTradingDay('2026-04-02')).toBe('2026-04-07'); // Vendredi saint + lundi de Pâques
+    expect(previousTradingDay('2026-04-07')).toBe('2026-04-02');
+  });
+
+  it('dernier jour de bourse de la semaine', () => {
+    expect(isLastTradingDayOf('weekly', '2026-09-25')).toBe(true); // vendredi
+    expect(isLastTradingDayOf('weekly', '2026-09-24')).toBe(false);
+    expect(isLastTradingDayOf('weekly', '2026-04-02')).toBe(true); // jeudi avant Vendredi saint
+    expect(isLastTradingDayOf('weekly', '2026-09-26')).toBe(false); // samedi
+  });
+
+  it('dernier jour de bourse du mois', () => {
+    expect(isLastTradingDayOf('monthly', '2026-10-30')).toBe(true); // vendredi 30, 31 = samedi
+    expect(isLastTradingDayOf('monthly', '2026-10-29')).toBe(false);
+    expect(isLastTradingDayOf('monthly', '2026-12-31')).toBe(true);
+  });
+
+  it('fin de la période précédente', () => {
+    expect(previousPeriodEnd('weekly', '2026-09-25')).toBe('2026-09-18');
+    expect(previousPeriodEnd('monthly', '2026-10-30')).toBe('2026-09-30');
   });
 });
