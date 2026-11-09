@@ -29,6 +29,8 @@ interface Props {
   /** Nom de la courbe de référence `ref` (ex. PRU, montant investi) */
   refLabel?: string;
   height?: number;
+  /** Unité des valeurs : euros (défaut) ou indice base 100 */
+  unit?: 'eur' | 'index';
 }
 
 const tzOpts = { timeZone: 'Europe/Paris' } as const;
@@ -48,7 +50,9 @@ const hasRef = (d: ChartPoint): d is ChartPoint & { ref: number } =>
  * Courbe principale (2 px, aire légère) et, si fournie, courbe de référence en pointillés
  * (prix d'achat). Quadrillage horizontal discret, infobulle au survol, vue tableau.
  */
-export function LineChart({ data, label, axis, refLabel, height = 280 }: Props) {
+export function LineChart({ data, label, axis, refLabel, height = 280, unit = 'eur' }: Props) {
+  const fmt =
+    unit === 'eur' ? eur : (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
   if (data.length < 2) {
     return <p className="text-sm text-slate-500">Pas assez de données pour tracer une courbe.</p>;
   }
@@ -113,7 +117,7 @@ export function LineChart({ data, label, axis, refLabel, height = 280 }: Props) 
             />
             <YAxis
               domain={[min - pad, max + pad]}
-              tickFormatter={(v: number) => eur(v)}
+              tickFormatter={(v: number) => fmt(v)}
               tick={{ fill: 'var(--viz-text-2)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
@@ -140,7 +144,7 @@ export function LineChart({ data, label, axis, refLabel, height = 280 }: Props) 
                         className="inline-block h-2 w-2 rounded-full"
                         style={{ background: 'var(--series-1)' }}
                       />
-                      {label} : {eur(p.v)}
+                      {label} : {fmt(p.v)}
                     </div>
                     {showRef && hasRef(p) && (
                       <div className="mt-0.5 flex items-center gap-2 tabular-nums">
@@ -149,7 +153,7 @@ export function LineChart({ data, label, axis, refLabel, height = 280 }: Props) 
                           className="inline-block h-2 w-2 rounded-full"
                           style={{ background: 'var(--series-ref)' }}
                         />
-                        {refLabel} : {eur(p.ref)}
+                        {refLabel} : {fmt(p.ref)}
                       </div>
                     )}
                   </div>
@@ -204,10 +208,10 @@ export function LineChart({ data, label, axis, refLabel, height = 280 }: Props) 
               .map((d) => (
                 <tr key={d.t}>
                   <td className="py-0.5">{full(d.t)}</td>
-                  <td className="py-0.5 text-right tabular-nums">{eur(d.v)}</td>
+                  <td className="py-0.5 text-right tabular-nums">{fmt(d.v)}</td>
                   {showRef && (
                     <td className="py-0.5 text-right tabular-nums">
-                      {hasRef(d) ? eur(d.ref) : '—'}
+                      {hasRef(d) ? fmt(d.ref) : '—'}
                     </td>
                   )}
                 </tr>

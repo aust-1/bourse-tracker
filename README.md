@@ -24,7 +24,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   seule fois, puis se ré-arment d'un clic. Historique avec l'état d'envoi par canal.
 - **Historique** : courbe de la valeur du portefeuille, gain **hors apports** (un achat n'est pas de la
   performance), dividendes compris, rendement pondéré par le temps (TWR) et TRI annualisé (XIRR, sur
-  un an ou plus), sur 1 M, 3 M, depuis janvier, 1 A ou Tout.
+  un an ou plus), sur 1 M, 3 M, depuis janvier, 1 A ou Tout ; comparaison en base 100 à un indice
+  de référence au choix (CAC 40, MSCI World…).
 - **Résumé quotidien** à l'heure choisie, jours de bourse seulement.
 - **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
   Healthchecks.io du worker, page « Supervision » (administrateur) : état du worker, échecs de cotation,

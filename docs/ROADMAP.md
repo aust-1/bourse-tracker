@@ -35,7 +35,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 ## 4. Performance
 
 - [x] **4 — TWR et TRI (XIRR)** : rendement pondéré par le temps et TRI annualisé sur l'historique.
-- [ ] **11 — Indice de référence** : comparaison de la courbe à un indice ou ETF choisi.
+- [x] **11 — Indice de référence** : comparaison de la courbe à un indice ou ETF choisi.
 - [ ] **24 — Cache de l'historique** : séries calculées mises en cache, invalidées à chaque
       modification d'ordre ou de mouvement.
 

@@ -48,6 +48,13 @@ export const settingsSchema = z.object({
     ),
   socialTaxRate: rate('Prélèvements sociaux', DEFAULT_SOCIAL_RATE),
   incomeTaxRate: rate('Impôt sur le revenu', DEFAULT_INCOME_RATE),
+  benchmarkSymbol: z
+    .string()
+    .transform(blankToNull)
+    .refine(
+      (v) => v === null || /^[\^A-Za-z0-9.=-]{1,20}$/.test(v),
+      'Indice de référence : symbole Yahoo invalide (ex. ^FCHI, CW8.PA)',
+    ),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -60,6 +67,7 @@ export function parseSettingsForm(formData: FormData): { data?: SettingsInput; e
     summaryTime: String(formData.get('summaryTime') ?? ''),
     socialTaxRate: String(formData.get('socialTaxRate') ?? ''),
     incomeTaxRate: String(formData.get('incomeTaxRate') ?? ''),
+    benchmarkSymbol: String(formData.get('benchmarkSymbol') ?? ''),
   });
   if (parsed.success) return { data: parsed.data };
   return { error: parsed.error.issues[0]?.message ?? 'Saisie invalide' };

@@ -83,6 +83,8 @@ export function incomeFlows(
 }
 
 export interface PeriodStats {
+  /** Dernier point avant la période (null : depuis le début) */
+  base: Snapshot | null;
   /** Points affichés sur la période */
   points: Snapshot[];
   end: Snapshot;
@@ -144,6 +146,7 @@ export function periodStats(
   const gain = end.marketValue - baseValue - contributions;
   const capital = baseValue + contributions;
   return {
+    base,
     points,
     end,
     gain,

@@ -28,6 +28,7 @@ export default async function SettingsPage() {
           summaryTime: (data?.summary_time ?? '17:45').slice(0, 5),
           socialTaxRate: String(data?.social_tax_rate ?? DEFAULT_SOCIAL_RATE),
           incomeTaxRate: String(data?.income_tax_rate ?? DEFAULT_INCOME_RATE),
+          benchmarkSymbol: data?.benchmark_symbol ?? '',
         }}
       />
       <MfaSettings />

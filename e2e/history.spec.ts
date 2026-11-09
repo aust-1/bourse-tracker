@@ -43,6 +43,8 @@ test('historique : courbe, gain hors apports et changement de période', async (
   await expect(page.locator('.card', { hasText: 'TRI annualisé' })).toContainText(
     'au moins 365 jours',
   );
+  // pas d'indice choisi : invitation à en choisir un
+  await expect(page.getByText('Choisis un indice de référence')).toBeVisible();
 
   // 1 mois : l'achat est antérieur à la période, donc aucun apport
   await page.getByRole('link', { name: '1 M' }).click();

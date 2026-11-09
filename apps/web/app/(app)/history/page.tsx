@@ -1,7 +1,8 @@
-import { parisDate } from '@bourse/core';
+import { parisDate, rebaseCloses, twrIndex } from '@bourse/core';
 import Link from 'next/link';
 import { LineChart } from '@/components/line-chart';
 import { Pl } from '@/components/pl';
+import { loadBenchmarkCloses } from '@/lib/benchmark';
 import { loadCash } from '@/lib/cash';
 import { eur } from '@/lib/format';
 import {
@@ -40,6 +41,33 @@ export default async function HistoryPage({
 
   const withHistory = new Set(closes.map((c) => c.instrumentId));
   const loading = instruments.filter((i) => ids.includes(i.id) && !withHistory.has(i.id));
+
+  // comparaison à l'indice de référence choisi dans les réglages (base 100, TWR)
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('benchmark_symbol')
+    .maybeSingle();
+  const benchmarkSymbol = settings?.benchmark_symbol ?? null;
+  let comparison: { t: number; v: number; ref: number | null }[] | null = null;
+  let benchmarkPct: number | null = null;
+  let benchmarkError = false;
+  if (benchmarkSymbol && stats) {
+    const benchCloses = await loadBenchmarkCloses(benchmarkSymbol);
+    if (benchCloses) {
+      const dates = stats.points.map((p) => p.date);
+      const portfolio = twrIndex(stats.points, stats.base);
+      const bench = rebaseCloses(benchCloses, dates, stats.base?.date ?? dates[0] ?? null);
+      comparison = stats.points.map((p, i) => ({
+        t: Date.parse(`${p.date}T12:00:00Z`),
+        v: portfolio[i]!,
+        ref: bench[i] ?? null,
+      }));
+      const last = bench[bench.length - 1];
+      benchmarkPct = last === null || last === undefined ? null : last - 100;
+    } else {
+      benchmarkError = true;
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -128,6 +156,39 @@ export default async function HistoryPage({
               ref: s.netContributions,
             }))}
           />
+
+          {comparison && (
+            <section className="flex flex-col gap-2" aria-label="Comparaison">
+              <h2 className="text-lg font-semibold">Comparaison à {benchmarkSymbol}</h2>
+              <p className="text-sm" data-testid="benchmark-summary">
+                Portefeuille <Pl value={stats.twrPct} kind="pct" /> · {benchmarkSymbol}{' '}
+                <Pl value={benchmarkPct} kind="pct" />
+                <span className="text-slate-500"> (base 100 au début de la période)</span>
+              </p>
+              <LineChart
+                label="Portefeuille (TWR)"
+                refLabel={benchmarkSymbol ?? 'Indice'}
+                axis="date"
+                unit="index"
+                data={comparison}
+              />
+            </section>
+          )}
+          {benchmarkError && (
+            <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+              Indice {benchmarkSymbol} indisponible pour le moment (source de prix muette ou symbole
+              inconnu).
+            </p>
+          )}
+          {!benchmarkSymbol && (
+            <p className="text-xs text-slate-500">
+              Choisis un indice de référence dans les{' '}
+              <Link href="/settings" className="underline">
+                Réglages
+              </Link>{' '}
+              pour comparer ta performance.
+            </p>
+          )}
         </>
       )}
     </div>

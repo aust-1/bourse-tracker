@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { periodCashFlows, twr, xirr, type ValuePoint } from './performance';
+import { periodCashFlows, rebaseCloses, twr, twrIndex, xirr, type ValuePoint } from './performance';
 
 const p = (date: string, marketValue: number, netContributions: number): ValuePoint => ({
   date,
@@ -88,5 +88,36 @@ describe('periodCashFlows', () => {
       { date: '2026-01-06', amount: -1000 },
       { date: '2026-01-06', amount: 2300 },
     ]);
+  });
+});
+
+describe('twrIndex', () => {
+  it('base 100, insensible aux apports', () => {
+    const idx = twrIndex([
+      p('2026-01-05', 1000, 1000),
+      p('2026-01-06', 1100, 1000),
+      p('2026-01-07', 11_100, 11_000),
+    ]);
+    expect(idx[0]).toBeCloseTo(100, 9);
+    expect(idx[1]).toBeCloseTo(110, 9);
+    expect(idx[2]).toBeCloseTo(110, 9);
+  });
+});
+
+describe('rebaseCloses', () => {
+  const closes = [
+    { date: '2026-01-02', close: 50 },
+    { date: '2026-01-05', close: 55 },
+    { date: '2026-01-07', close: 60 },
+  ];
+  it('dernière clôture connue, base à la date de départ', () => {
+    const r = rebaseCloses(closes, ['2026-01-05', '2026-01-06', '2026-01-07'], '2026-01-02');
+    [110, 110, 120].forEach((v, i) => expect(r[i]).toBeCloseTo(v, 9));
+  });
+  it('sans base : première date', () => {
+    expect(rebaseCloses(closes, ['2026-01-05', '2026-01-07'])[1]).toBeCloseTo(109.0909, 3);
+  });
+  it('aucune clôture', () => {
+    expect(rebaseCloses([], ['2026-01-05'])).toEqual([null]);
   });
 });

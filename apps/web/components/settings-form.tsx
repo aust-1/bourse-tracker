@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react';
 import { saveSettings, sendTest, type SettingsState } from '@/app/(app)/settings/actions';
+import { BENCHMARK_SUGGESTIONS } from '@/lib/benchmark-suggestions';
 import { SUMMARY_MAX, SUMMARY_MIN } from '@/lib/settings';
 
 export interface SettingsValues {
@@ -11,6 +12,7 @@ export interface SettingsValues {
   summaryTime: string;
   socialTaxRate: string;
   incomeTaxRate: string;
+  benchmarkSymbol: string;
 }
 
 function TestButton({ channel, label }: { channel: 'discord' | 'email'; label: string }) {
@@ -126,6 +128,28 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
             finances.
           </span>
         </fieldset>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Indice de référence (page Historique)
+          <input
+            name="benchmarkSymbol"
+            list="benchmark-suggestions"
+            defaultValue={v?.benchmarkSymbol ?? values.benchmarkSymbol}
+            placeholder="^FCHI"
+            className="input w-48"
+          />
+          <datalist id="benchmark-suggestions">
+            {BENCHMARK_SUGGESTIONS.map((b) => (
+              <option key={b.symbol} value={b.symbol}>
+                {b.label}
+              </option>
+            ))}
+          </datalist>
+          <span className="text-xs text-slate-500">
+            Symbole Yahoo : ^FCHI (CAC 40), ^STOXX50E, CW8.PA (MSCI World)… Vide : pas de
+            comparaison.
+          </span>
+        </label>
 
         {state.error && (
           <p role="alert" className="text-sm text-red-600">

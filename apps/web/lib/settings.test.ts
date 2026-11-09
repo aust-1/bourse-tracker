@@ -23,6 +23,7 @@ describe('parseSettingsForm', () => {
       summaryTime: '17:45',
       socialTaxRate: 17.2,
       incomeTaxRate: 12.8,
+      benchmarkSymbol: null,
     });
   });
 
@@ -35,6 +36,7 @@ describe('parseSettingsForm', () => {
       summaryTime: '18:00',
       socialTaxRate: 17.2,
       incomeTaxRate: 12.8,
+      benchmarkSymbol: null,
     });
   });
 

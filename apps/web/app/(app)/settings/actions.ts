@@ -30,6 +30,7 @@ export async function saveSettings(
       summary_time: data.summaryTime,
       social_tax_rate: data.socialTaxRate,
       income_tax_rate: data.incomeTaxRate,
+      benchmark_symbol: data.benchmarkSymbol,
     },
     { onConflict: 'user_id' },
   );

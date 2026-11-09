@@ -392,6 +392,7 @@ export type Database = {
       };
       settings: {
         Row: {
+          benchmark_symbol: string | null;
           discord_webhook_url: string | null;
           email: string | null;
           income_tax_rate: number;
@@ -402,6 +403,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          benchmark_symbol?: string | null;
           discord_webhook_url?: string | null;
           email?: string | null;
           income_tax_rate?: number;
@@ -412,6 +414,7 @@ export type Database = {
           user_id?: string;
         };
         Update: {
+          benchmark_symbol?: string | null;
           discord_webhook_url?: string | null;
           email?: string | null;
           income_tax_rate?: number;

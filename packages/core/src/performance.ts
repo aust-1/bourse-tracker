@@ -100,3 +100,44 @@ export function periodCashFlows(
   flows.push({ date: end.date, amount: end.marketValue });
   return flows;
 }
+
+/**
+ * Indice base 100 du TWR à chaque point (mêmes conventions que `twr`) : la courbe de performance
+ * du portefeuille, hors effet des apports. Reste à 100 tant que rien n'est investi.
+ */
+export function twrIndex(points: readonly ValuePoint[], base: ValuePoint | null = null): number[] {
+  let prev = base ?? { date: '', marketValue: 0, netContributions: 0 };
+  let growth = 1;
+  return points.map((p) => {
+    const value = twr([p], prev);
+    if (value !== null) growth *= 1 + value / 100;
+    prev = p;
+    return growth * 100;
+  });
+}
+
+/**
+ * Cours d'un indice ramenés en base 100 aux dates données : dernière clôture connue ≤ date,
+ * divisée par celle de `baseDate` (ou de la première date). null tant qu'aucune clôture n'existe.
+ */
+export function rebaseCloses(
+  closes: readonly { date: string; close: number }[],
+  dates: readonly string[],
+  baseDate: string | null = null,
+): (number | null)[] {
+  const sorted = [...closes].sort((a, b) => a.date.localeCompare(b.date));
+  const at = (day: string): number | null => {
+    let last: number | null = null;
+    for (const c of sorted) {
+      if (c.date > day) break;
+      last = c.close;
+    }
+    return last;
+  };
+  const ref = at(baseDate ?? dates[0] ?? '') ?? sorted.find((c) => c.close > 0)?.close ?? null;
+  if (!ref) return dates.map(() => null);
+  return dates.map((d) => {
+    const v = at(d);
+    return v === null ? null : (v / ref) * 100;
+  });
+}
