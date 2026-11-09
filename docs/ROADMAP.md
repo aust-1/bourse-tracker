@@ -49,7 +49,7 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 
 ## 6. Écrans
 
-- [ ] **14 — Page Ordres** : pagination, filtre par dates, totaux de la sélection, montant frais
+- [x] **14 — Page Ordres** : pagination, filtre par dates, totaux de la sélection, montant frais
       compris.
 - [ ] **10 — Répartition** : graphique des poids par ligne et par type (ETF / action).
 - [ ] **15 — Fiche instrument** : PRU sur le graphique, performance de la ligne, dividendes reçus.

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, mockInstrumentSearch, resetData } from './support';
+import { admin, login, mockInstrumentSearch, resetData } from './support';
 
 test.beforeEach(async ({ page }) => {
   await resetData();
@@ -95,4 +95,42 @@ test("cycle de vie d'un ordre : ajout, vente à découvert refusée, modificatio
   await page.getByRole('row', { name: /Achat/ }).getByRole('link', { name: 'Modifier' }).click();
   await page.getByRole('button', { name: 'Supprimer cet ordre' }).click();
   await expect(page.getByText('Aucun ordre')).toBeVisible();
+});
+
+test('liste des ordres : totaux de la sélection, filtre par dates, pagination', async ({
+  page,
+}) => {
+  const { userId, instrumentId } = await resetData();
+  // 55 achats de 1 titre à 10 € (1 € de frais), un par jour à partir du 1er février 2026
+  const rows = Array.from({ length: 55 }, (_, i) => ({
+    user_id: userId,
+    instrument_id: instrumentId,
+    side: 'buy',
+    quantity: 1,
+    unit_price: 10,
+    fees: 1,
+    executed_at: new Date(Date.UTC(2026, 1, 1 + i, 9)).toISOString(),
+  }));
+  expect((await admin.from('orders').insert(rows)).error).toBeNull();
+  await login(page);
+  await page.goto('/orders');
+
+  await expect(page.getByTestId('orders-totals')).toContainText('55 ordres');
+  await expect(page.getByTestId('orders-totals')).toContainText(/achats 605,00\s€/);
+  await expect(page.getByText('Page 1 / 2')).toBeVisible();
+  await expect(page.locator('tbody tr')).toHaveCount(50);
+  // montant frais compris : 10 € + 1 €
+  await expect(page.locator('tbody tr').first()).toContainText(/11,00\s€/);
+
+  await page.getByRole('link', { name: 'Suivants →' }).click();
+  await expect(page.getByText('Page 2 / 2')).toBeVisible();
+  await expect(page.locator('tbody tr')).toHaveCount(5);
+
+  // du 1er au 10 février (Paris) : 10 ordres
+  await page.goto('/orders');
+  await page.getByLabel('Du').fill('2026-02-01');
+  await page.getByLabel('Au').fill('2026-02-10');
+  await page.getByRole('button', { name: 'Filtrer' }).click();
+  await expect(page.getByTestId('orders-totals')).toContainText('10 ordres');
+  await expect(page.getByText(/Page \d/)).toHaveCount(0);
 });
