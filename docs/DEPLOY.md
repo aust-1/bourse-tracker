@@ -152,7 +152,9 @@ de prix sont évaluées sur ces cotes différées. Pour du temps réel, voir le 
 
 **Alerte « Source de prix indisponible »** (Discord/email) : Yahoo ne répond plus depuis plus de 5 minutes en séance.
 Regarder `docker compose logs worker`. Si l'API a changé de format, le smoke test nocturne de GitHub (« Smoke test Yahoo »)
-échouera aussi. Plan B : implémenter l'interface `PriceProvider` (`packages/providers/src/types.ts`) pour EODHD ou
+échouera aussi. **Secours automatique** : avec `EODHD_API_KEY` dans `.env`, le worker prend ses cotes chez EODHD
+après 3 échecs consécutifs de Yahoo (pendant 15 minutes, puis retente Yahoo) ; les logs le signalent
+(« source de prix basculée »). L'historique et la recherche restent sur Yahoo. Plan B durable : implémenter l'interface `PriceProvider` (`packages/providers/src/types.ts`) pour EODHD ou
 Twelve Data (plan Grow, 29 $/mois pour l'Europe), et remplacer `new YahooProvider()` dans `apps/worker/src/index.ts`
 et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 

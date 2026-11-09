@@ -55,6 +55,7 @@ services:
       HEALTHCHECKS_PING_URL: ${HEALTHCHECKS_PING_URL:-}
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-30000}
       STALE_AFTER_MS: ${STALE_AFTER_MS:-300000}
+      EODHD_API_KEY: ${EODHD_API_KEY:-}
     logging: *logging
 
 networks:

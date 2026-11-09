@@ -31,6 +31,8 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
   un an ou plus), sur 1 M, 3 M, depuis janvier, 1 A ou Tout ; comparaison en base 100 à un indice
   de référence au choix (CAC 40, MSCI World…).
 - **Résumé quotidien** à l'heure choisie, jours de bourse seulement.
+- **Source de secours** : avec une clé EODHD, les cotes basculent automatiquement sur EODHD quand Yahoo
+  échoue (disjoncteur : 3 échecs, 15 minutes).
 - **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
   Healthchecks.io du worker, page « Supervision » (administrateur) : état du worker, échecs de cotation,
   fraîcheur de chaque cote.
