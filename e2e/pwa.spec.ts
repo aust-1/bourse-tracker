@@ -13,7 +13,10 @@ test('PWA : manifeste et icônes accessibles sans session', async ({ request }) 
   }
 });
 
-test('favicon : .ico et SVG servis sans session et déclarés dans la page', async ({ page, request }) => {
+test('favicon : .ico et SVG servis sans session et déclarés dans la page', async ({
+  page,
+  request,
+}) => {
   for (const [url, type] of [
     ['/favicon.ico', 'image/x-icon'],
     ['/icons/icon.svg', 'image/svg+xml'],
