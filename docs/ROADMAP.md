@@ -173,3 +173,7 @@ de données.
 - [ ] **64 — Plan d'investissement programmé** : rappel mensuel et suivi de l'investissement progressif.
 - [ ] **65 — Récapitulatif fiscal annuel** d'un CTO (plus-values réalisées, dividendes).
 - [ ] **66 — Partage public en lecture** d'un portefeuille, en pourcentages seulement.
+
+## 14. User experience
+
+- [ ] **67 — Éléments cliquables** : amélioration de l'expérience utilisateur avec des éléments plus intuitifs, le pointeur de la souris change au passage sur un élément cliquable.
