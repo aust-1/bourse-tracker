@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <title>Double authentification activée</title>
+  </head>
+  <body style="margin: 0; padding: 0; background: #0a0f0a">
+    <div style="display: none; max-height: 0; overflow: hidden">
+      Un second facteur a été ajouté à ton compte Bourse Tracker.
+    </div>
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background: #0a0f0a"
+    >
+      <tr>
+        <td align="center" style="padding: 32px 16px">
+          <table
+            role="presentation"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="max-width: 520px; background: #121a13; border: 1px solid #23402a"
+          >
+            <tr>
+              <td
+                style="
+                  padding: 8px 20px;
+                  background: #6dff8e;
+                  font-family: 'Fira Code', Consolas, Menlo, 'Courier New', monospace;
+                  font-size: 14px;
+                  font-weight: bold;
+                  color: #0a0f0a;
+                "
+              >
+                BOURSE.SYS
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 28px 24px;
+                  font-family: 'Fira Code', Consolas, Menlo, 'Courier New', monospace;
+                  font-size: 14px;
+                  line-height: 1.6;
+                  color: #b8e8c2;
+                "
+              >
+                <h1 style="margin: 0 0 16px; font-size: 18px; color: #6dff8e">
+                  &gt; double authentification activée
+                </h1>
+                <p style="margin: 0">
+                  Un second facteur (<span style="color: #6dff8e">{{ .FactorType }}</span>) vient
+                  d'être ajouté au compte <span style="color: #6dff8e">{{ .Email }}</span>. À chaque
+                  connexion, le code de ton application d'authentification te sera demandé en plus
+                  du mot de passe.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 16px 24px;
+                  border-top: 1px solid #23402a;
+                  font-family: 'Fira Code', Consolas, Menlo, 'Courier New', monospace;
+                  font-size: 12px;
+                  line-height: 1.5;
+                  color: #ffb547;
+                "
+              >
+                Ce n'est pas toi ? Quelqu'un a accès à ton compte : préviens tout de suite
+                l'administrateur de l'instance, qui peut retirer ce facteur et désactiver le compte.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

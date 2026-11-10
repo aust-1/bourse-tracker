@@ -3,3 +3,5 @@ pnpm-lock.yaml
 dist
 supabase/.temp
 next-env.d.ts
+# modèles d'emails Supabase : Prettier couperait les balises {{ … }} sur deux lignes
+supabase/templates
