@@ -5,12 +5,24 @@ describe('safeNext', () => {
   it('garde un chemin local', () => {
     expect(safeNext('/settings/password')).toBe('/settings/password');
   });
-  it.each([null, undefined, '', 'https://evil.example.com', '//evil.example.com', '/\\evil'])(
-    'refuse %s',
-    (v) => {
-      expect(safeNext(v)).toBe('/');
-    },
-  );
+  it('garde les paramètres et normalise le chemin', () => {
+    expect(safeNext('/history?range=1y#top')).toBe('/history?range=1y#top');
+    expect(safeNext('/a/../settings')).toBe('/settings');
+  });
+  it.each([
+    null,
+    undefined,
+    '',
+    'https://evil.example.com',
+    '//evil.example.com',
+    '/\\evil',
+    // tabulations et sauts de ligne retirés par le navigateur : « //evil.example.com »
+    '/\t/evil.example.com',
+    '/\n/evil.example.com',
+    '\t//evil.example.com',
+  ])('refuse %j', (v) => {
+    expect(safeNext(v)).toBe('/');
+  });
 });
 
 describe('needsSecondFactor', () => {

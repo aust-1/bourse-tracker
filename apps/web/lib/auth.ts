@@ -1,12 +1,20 @@
 /**
  * Chemin de redirection sûr après un lien reçu par email : uniquement un chemin local
- * (pas d'URL absolue ni de `//hôte` qui enverrait vers un autre site).
+ * (pas d'URL absolue ni de `//hôte` qui enverrait vers un autre site). L'URL est lue comme le
+ * navigateur la lira (tabulations et sauts de ligne retirés, `\` lu comme `/`) : `/\t/evil.com`
+ * devient `//evil.com` et doit être refusé. On renvoie le chemin normalisé, pas l'entrée brute.
  */
 export function safeNext(next: string | null | undefined, fallback = '/'): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) {
+  if (!next || !next.startsWith('/')) return fallback;
+  const base = 'http://local.invalid';
+  let url: URL;
+  try {
+    url = new URL(next, base);
+  } catch {
     return fallback;
   }
-  return next;
+  if (url.origin !== base) return fallback;
+  return url.pathname + url.search + url.hash;
 }
 
 /** Pages réservées aux visiteurs non connectés (un compte connecté est renvoyé à l'accueil). */
