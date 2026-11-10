@@ -67,3 +67,109 @@ réalisation ci-dessous (les numéros renvoient à la liste d'origine).
 ## 8. Mobile
 
 - [x] **17 — PWA** : manifeste, icônes, installable ; tableau de bord lisible sur téléphone.
+
+---
+
+# Deuxième vague
+
+Améliorations identifiées après la première vague (PR #8). Ordre de réalisation proposé : les trois
+premières sections réutilisent l'existant (clôtures, cache, alertes, graphiques) sans nouvelle source
+de données.
+
+## 9. Titres suivis hors portefeuille
+
+- [ ] **26 — Liste de suivi** : bouton « Suivre » dans la recherche et sur la fiche du titre
+      (`user_instruments` + indicateur `watched`, note facultative) ; le worker cote aussi les titres
+      suivis, éventuellement moins souvent (toutes les 5 minutes).
+- [ ] **27 — Page « Suivi »** : cours, variation du jour, écart au plus haut / plus bas sur 52 semaines,
+      variation depuis l'ajout et prix de référence noté à l'ajout ; raccourcis « créer une alerte » et
+      « passer un ordre ».
+- [ ] **28 — Ordres simulés** : portefeuille fictif séparé des vrais par la base, pour tester une
+      stratégie ou comparer « si j'avais acheté au lieu de vendre ».
+
+## 10. Historique
+
+- [ ] **29 — Dates libres** : sélection « du / au » conservée dans l'URL, en plus des périodes fixes.
+- [ ] **30 — Périodes supplémentaires** : 1 semaine, 6 mois, 3 ans, 5 ans, depuis l'ouverture du
+      portefeuille, depuis le premier ordre.
+- [ ] **31 — Fiche du titre** : périodes 5 ans et maximum ; ordres marqués sur la courbe (achat /
+      vente).
+- [ ] **32 — Vue par année** : tableau rendement, gain, apports et dividendes par année civile.
+- [ ] **33 — Rendements mensuels** : grille mois × année colorée selon le rendement.
+
+## 11. Indicateurs
+
+- [ ] **34 — Indicateurs techniques** (calculés dans `core` à partir des clôtures stockées) : moyennes
+      mobiles 50 / 200 jours sur le graphique, plus haut / plus bas sur 52 semaines, volatilité annualisée,
+      baisse maximale sur la période, RSI.
+- [ ] **35 — Indicateurs du portefeuille** : volatilité, baisse maximale, ratio de Sharpe sur la période,
+      concentration (poids de la première ligne, des trois premières), part PEA / CTO.
+- [ ] **36 — Données fondamentales** : PER, rendement du dividende, capitalisation, secteur, pays, frais
+      courants des ETF (source Yahoo `quoteSummary`, stockées avec leur date et présentées comme
+      indicatives).
+- [ ] **37 — Répartition par secteur et par pays** du portefeuille (à partir des données
+      fondamentales).
+
+## 12. Améliorer l'existant
+
+### Données et justesse
+
+- [ ] **38 — Dividendes détectés** : événements Yahoo (`events=div`) proposés au worker pour les titres
+      détenus, à confirmer d'un clic.
+- [ ] **39 — Splits détectés** : événements Yahoo (`events=split`) signalés à l'administrateur.
+- [ ] **40 — Calendrier par place** : jours fériés de Xetra, Milan, Madrid… en plus d'Euronext.
+- [ ] **41 — Historique stocké** : instantané journalier par portefeuille calculé par le worker,
+      invalidé à chaque modification d'ordre ou de mouvement (page Historique instantanée).
+- [ ] **42 — Script `pnpm db:types`** : génération des types fiable en local (port de Postgres).
+
+### Tableau de bord
+
+- [ ] **43 — Colonnes** triables (poids, gain, variation du jour) et au choix ; colonnes poids (% du
+      portefeuille) et dividendes reçus par ligne.
+- [ ] **44 — Courbe de la séance** : valeur du portefeuille minute par minute aujourd'hui.
+- [ ] **45 — Retard des cotes** explicite (différé Yahoo) et heure de la dernière cote dans l'en-tête.
+
+### Ordres et mouvements
+
+- [ ] **46 — Suppression réversible** : confirmation ou « Annuler » pendant quelques secondes (ordres,
+      mouvements, alertes).
+- [ ] **47 — Dupliquer un ordre** (« racheter aux mêmes conditions »).
+- [ ] **48 — Mouvements** : filtres (type, dates) et export CSV réimportable.
+- [ ] **49 — Import CSV** : mouvements (dividendes, versements) et vrais formats des courtiers courants,
+      testés sur des fichiers d'exemple.
+
+### Alertes et notifications
+
+- [ ] **50 — Modifier une alerte** sans la recréer.
+- [ ] **51 — Alertes sur indicateurs** : franchissement de la moyenne 200 jours, nouveau plus haut /
+      plus bas sur 52 semaines, RSI ; alertes sur un titre suivi.
+- [ ] **52 — Regroupement** : un seul message quand plusieurs alertes partent au même cycle.
+- [ ] **53 — Heures calmes** par canal (pas de notification la nuit).
+- [ ] **54 — Messages** : mise en forme par canal (Telegram, lien cliquable ntfy), lien vers le site,
+      petit graphique joint au rapport (email, Telegram).
+
+### Sécurité et comptes
+
+- [ ] **55 — Codes de secours** de la double authentification.
+- [ ] **56 — Historique des connexions** (date, appareil) dans les réglages.
+- [ ] **57 — Limitation des tentatives** sur la connexion et le mot de passe oublié, côté application.
+
+### Exploitation et code
+
+- [ ] **58 — Test réel EODHD** : test en direct facultatif, comme celui de Yahoo, si une clé est
+      présente.
+- [ ] **59 — Métriques du worker** : durée des cycles et taux d'échec par source sur 24 h dans la
+      Supervision.
+- [ ] **60 — Conversion des ordres factorisée** : une seule fonction base → `core` au lieu de quatre
+      copies (fiche titre, action des alertes, worker, `queries.ts`) ; conversion `numeric` → `number`
+      vérifiée partout.
+- [ ] **61 — Accessibilité** : navigation au clavier (sélecteur, formulaires) et contrastes du thème.
+
+## 13. Nouvelles fonctionnalités
+
+- [ ] **62 — Plusieurs devises** (actions américaines sur un CTO) : taux de change, valorisation en EUR.
+- [ ] **63 — Objectifs et rééquilibrage** : répartition cible par ligne et suggestion d'achats pour y
+      revenir.
+- [ ] **64 — Plan d'investissement programmé** : rappel mensuel et suivi de l'investissement progressif.
+- [ ] **65 — Récapitulatif fiscal annuel** d'un CTO (plus-values réalisées, dividendes).
+- [ ] **66 — Partage public en lecture** d'un portefeuille, en pourcentages seulement.

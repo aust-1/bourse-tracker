@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 45 420 420">
+  <!-- Favicon : même dessin que icon-512.png, cadré plus serré et trait plus épais pour rester lisible en 16 px -->
+  <rect x="52" y="45" width="420" height="420" rx="60" fill="#0a0f0a"/>
+  <path d="M100 348 185 285 245 318 318 213 370 240 410 152" fill="none" stroke="#6dff8e" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="418" y="104" width="28" height="84" fill="#6dff8e"/>
+  <path d="M92 400h336" stroke="#23402a" stroke-width="14"/>
+</svg>

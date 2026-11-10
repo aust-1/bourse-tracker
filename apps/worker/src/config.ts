@@ -25,7 +25,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     pollIntervalMs: Number(env.POLL_INTERVAL_MS ?? 30_000),
     healthchecksUrl: env.HEALTHCHECKS_PING_URL || null,
     resendApiKey: env.RESEND_API_KEY || null,
-    emailFrom: env.EMAIL_FROM || 'Bourse Tracker <onboarding@resend.dev>',
+    emailFrom: env.EMAIL_FROM || 'Bourse Tracker <onboarding@eliott-roussille.fr>',
     staleAfterMs: Number(env.STALE_AFTER_MS ?? 5 * 60_000),
     eodhdApiKey: env.EODHD_API_KEY || null,
     telegramBotToken: env.TELEGRAM_BOT_TOKEN || null,
