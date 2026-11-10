@@ -21,6 +21,12 @@ describe('parseSettingsForm', () => {
       email: 'moi@example.com',
       summaryEnabled: true,
       summaryTime: '17:45',
+      socialTaxRate: 17.2,
+      incomeTaxRate: 12.8,
+      benchmarkSymbol: null,
+      reportFrequency: null,
+      ntfyUrl: null,
+      telegramChatId: null,
     });
   });
 
@@ -31,6 +37,12 @@ describe('parseSettingsForm', () => {
       email: null,
       summaryEnabled: false,
       summaryTime: '18:00',
+      socialTaxRate: 17.2,
+      incomeTaxRate: 12.8,
+      benchmarkSymbol: null,
+      reportFrequency: null,
+      ntfyUrl: null,
+      telegramChatId: null,
     });
   });
 
@@ -41,6 +53,10 @@ describe('parseSettingsForm', () => {
     [{ summaryTime: '17:44' }, /entre 17:45 et 22:30/],
     [{ summaryTime: '23:00' }, /entre 17:45 et 22:30/],
     [{ summaryTime: '18h' }, /Heure/],
+    [{ socialTaxRate: '150' }, /Prélèvements sociaux : pourcentage/],
+    [{ incomeTaxRate: 'abc' }, /Impôt sur le revenu : pourcentage/],
+    [{ ntfyUrl: 'http://ntfy.sh/x' }, /ntfy/],
+    [{ telegramChatId: '@moi' }, /Telegram/],
   ])('rejette %j', (patch, msg) => {
     const r = parseSettingsForm(form({ ...valid, ...patch }));
     expect(r.data).toBeUndefined();
@@ -55,5 +71,20 @@ describe('describeDelivery', () => {
     expect(describeDelivery('email', 'error: Resend HTTP 403')).toBe(
       'Email : échec (Resend HTTP 403)',
     );
+  });
+});
+
+describe('taux de fiscalité', () => {
+  it('virgule acceptée', () => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries({
+      discordWebhookUrl: '',
+      email: '',
+      summaryTime: '18:00',
+      socialTaxRate: '18,6',
+      incomeTaxRate: '12,8',
+    }))
+      f.set(k, v);
+    expect(parseSettingsForm(f).data).toMatchObject({ socialTaxRate: 18.6, incomeTaxRate: 12.8 });
   });
 });

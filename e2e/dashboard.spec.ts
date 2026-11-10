@@ -26,7 +26,7 @@ test('tableau de bord : valeur, gains, et mise à jour en direct sans rechargeme
   expect((await admin.from('quotes_latest').upsert(quote(110))).error).toBeNull();
 
   await login(page);
-  await expect(page.getByText(CW8.name)).toBeVisible();
+  await expect(page.getByRole('link', { name: CW8.name })).toBeVisible();
   const totalCard = page.locator('.card', { hasText: 'Valeur du portefeuille' });
   await expect(totalCard).toContainText(/1\s100,00\s€/);
   const latent = page.locator('.card', { hasText: 'Gain latent' });

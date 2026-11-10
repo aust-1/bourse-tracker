@@ -5,13 +5,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { dateTime, eur, num } from '@/lib/format';
 import {
   buildPortfolioView,
+  peaEligibility,
   quoteFreshness,
   type InstrumentRow,
   type OrderRow,
   type QuoteRow,
 } from '@bourse/core';
+import { allocation } from '@/lib/allocation';
 import { loadQuotes, toQuoteRow } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/browser';
+import { AllocationBars } from './allocation-bars';
 import { Pl } from './pl';
 
 const POLL_MS = 15_000;
@@ -52,6 +55,10 @@ export function LiveDashboard(props: {
   orders: OrderRow[];
   instruments: InstrumentRow[];
   initialQuotes: QuoteRow[];
+  /** Liquidités du périmètre affiché (null si aucun mouvement enregistré) */
+  cash?: { balance: number; deposits: number; dividends: number } | null;
+  /** Portefeuille affiché de type PEA : signale les titres dont l'ISIN est hors EEE */
+  peaOnly?: boolean;
 }) {
   const [quotes, setQuotes] = useState(
     () => new Map(props.initialQuotes.map((q) => [q.instrumentId, q])),
@@ -111,10 +118,30 @@ export function LiveDashboard(props: {
     };
   }, []);
 
+  const outsideEea = useMemo(
+    () =>
+      new Set(
+        props.instruments.filter((i) => peaEligibility(i.isin) === 'outside_eea').map((i) => i.id),
+      ),
+    [props.instruments],
+  );
   const { rows, totals } = useMemo(
     () => buildPortfolioView(props.orders, props.instruments, quotes),
     [props.orders, props.instruments, quotes],
   );
+  const cashBalance = props.cash?.balance ?? null;
+  const split = useMemo(() => {
+    const types = new Map(props.instruments.map((i) => [i.id, i.assetType ?? null]));
+    return allocation(
+      rows.map((r) => ({
+        name: r.name,
+        marketValue: r.marketValue,
+        costBasis: r.costBasis,
+        assetType: types.get(r.instrumentId) ?? null,
+      })),
+      cashBalance,
+    );
+  }, [rows, props.instruments, cashBalance]);
 
   if (props.orders.length === 0) {
     return (
@@ -153,6 +180,21 @@ export function LiveDashboard(props: {
         </Stat>
       </div>
 
+      {props.cash && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="Liquidités">
+            <span className={props.cash.balance < 0 ? 'text-red-600' : ''}>
+              {eur(props.cash.balance)}
+            </span>
+          </Stat>
+          <Stat label="Valeur totale" hint="titres + liquidités">
+            {eur(totals.marketValue + props.cash.balance)}
+          </Stat>
+          <Stat label="Versements cumulés">{eur(props.cash.deposits)}</Stat>
+          <Stat label="Dividendes reçus">{eur(props.cash.dividends)}</Stat>
+        </div>
+      )}
+
       {totals.missingQuotes > 0 && (
         <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
           {totals.missingQuotes} ligne(s) sans cotation : valorisée(s) à leur prix de revient en
@@ -176,7 +218,7 @@ export function LiveDashboard(props: {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {rows.map((r) => (
               <tr key={r.instrumentId}>
-                <td className="td">
+                <td className="td min-w-44">
                   <Link
                     href={`/instruments/${r.instrumentId}`}
                     className="font-medium underline-offset-2 hover:underline"
@@ -185,6 +227,14 @@ export function LiveDashboard(props: {
                   </Link>
                   <div className="text-xs text-slate-500">
                     {r.symbol}
+                    {props.peaOnly && outsideEea.has(r.instrumentId) && (
+                      <span
+                        className="ml-1 text-red-600"
+                        title="Émetteur hors EEE : non éligible au PEA"
+                      >
+                        ⚠ hors PEA
+                      </span>
+                    )}
                     {r.quote && now && (
                       <>
                         {' · '}
@@ -215,6 +265,13 @@ export function LiveDashboard(props: {
           </tbody>
         </table>
       </div>
+
+      {split.byLine.length > 0 && (
+        <section className="card grid gap-6 md:grid-cols-2" aria-label="Répartition">
+          <AllocationBars title="Par ligne" slices={split.byLine} />
+          <AllocationBars title="Par type d’actif" slices={split.byType} />
+        </section>
+      )}
 
       <p className="text-xs text-slate-500">
         {connected ? '● Connexion temps réel active' : '○ Rafraîchissement toutes les 15 s'}

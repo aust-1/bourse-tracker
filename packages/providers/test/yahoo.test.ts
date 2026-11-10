@@ -87,6 +87,7 @@ describe('YahooProvider', () => {
       prevClose: 698.18,
       currency: 'EUR',
       exchange: 'PAR',
+      type: 'etf',
     });
     expect(q.quotedAt.toISOString()).toBe(new Date(1790350528 * 1000).toISOString());
     expect(q.name).toContain('Amundi');
@@ -140,6 +141,18 @@ describe('YahooProvider', () => {
       { date: '2026-09-23', close: 702.27 },
       { date: '2026-09-24', close: 698.18 },
     ]);
+  });
+
+  it('getDailyCloses max : bornes explicites (range=max donnerait des barres mensuelles)', async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request) => ok(chartDaily));
+    await new YahooProvider({ fetch }).getDailyCloses('CW8.PA', 'max');
+    const url = String(fetch.mock.calls[0]![0]);
+    expect(url).toMatch(/period1=0&period2=\d+&interval=1d/);
+    expect(url).not.toContain('range=');
+
+    fetch.mockClear();
+    await new YahooProvider({ fetch }).getDailyCloses('CW8.PA', '1y');
+    expect(String(fetch.mock.calls[0]![0])).toContain('range=1y&interval=1d');
   });
 
   it('search : garde ETF/actions européens, écarte fonds et places non européennes', async () => {

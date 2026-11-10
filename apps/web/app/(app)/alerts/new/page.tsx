@@ -13,7 +13,10 @@ export default async function NewAlertPage({
     instrument
       ? supabase.from('instruments').select('yahoo_symbol, name').eq('id', instrument).maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase.from('settings').select('discord_webhook_url, email').maybeSingle(),
+    supabase
+      .from('settings')
+      .select('discord_webhook_url, email, ntfy_url, telegram_chat_id')
+      .maybeSingle(),
   ]);
 
   return (
@@ -25,6 +28,8 @@ export default async function NewAlertPage({
         configured={{
           discord: Boolean(settings.data?.discord_webhook_url),
           email: Boolean(settings.data?.email),
+          ntfy: Boolean(settings.data?.ntfy_url),
+          telegram: Boolean(settings.data?.telegram_chat_id && process.env.TELEGRAM_BOT_TOKEN),
         }}
       />
     </div>

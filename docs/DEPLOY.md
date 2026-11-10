@@ -23,14 +23,32 @@ Dans le tableau de bord Supabase :
 3. **Settings → API** : note l'URL, la clé `anon` et la clé `service_role`.
 4. **Database → Replication** (ou `supabase_realtime` publication) : la table `quotes_latest` doit y figurer
    (la migration s'en charge ; vérifie-le si le tableau de bord ne se met pas à jour en direct).
+5. **Mot de passe oublié** (page `/forgot`) :
+   - **Authentication → URL Configuration** : _Site URL_ = `https://<domaine>` et ajoute
+     `https://<domaine>/auth/confirm**` aux _Redirect URLs_ (sinon le lien de l'email renvoie
+     vers la Site URL sans ouvrir la session).
+   - **Authentication → Emails → SMTP Settings** : branche un SMTP (Resend : hôte `smtp.resend.com`,
+     port `465`, utilisateur `resend`, mot de passe = clé API, expéditeur d'un domaine vérifié).
+     Sans SMTP personnalisé, Supabase n'envoie le lien qu'aux membres de ton équipe Supabase.
+   - Le lien par défaut (`{{ .ConfirmationURL }}`) doit être ouvert dans le navigateur qui a fait la
+     demande. Pour qu'il marche depuis n'importe quel appareil, remplace-le dans le modèle
+     _Reset Password_ par
+     `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/settings/password`.
+6. **Double authentification** : **Authentication → Multi-Factor → TOTP** doit être activé
+   (enrôlement et vérification). Chacun l'active ensuite depuis **Réglages**. La base impose le
+   second facteur (politiques restrictives `*_mfa`, migration `20261109000000_mfa.sql`) : un compte
+   qui l'a activé n'accède à rien avec son seul mot de passe, même par l'API. Code perdu :
+   l'administrateur supprime le facteur dans **Authentication → Users → (compte) → MFA factors**.
 
 ## 2. Services externes
 
-| Service         | À faire                                                                                                  | Variable                |
-| --------------- | -------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Discord         | Salon → Modifier → Intégrations → Webhooks → Nouveau → Copier l'URL (à coller dans **Réglages** du site) | —                       |
-| Resend          | Créer un compte, générer une clé API                                                                     | `RESEND_API_KEY`        |
-| Healthchecks.io | Créer un check « worker » : période 1 min, délai de grâce 5 min ; ajouter ton email en canal             | `HEALTHCHECKS_PING_URL` |
+| Service         | À faire                                                                                                         | Variable                |
+| --------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Discord         | Salon → Modifier → Intégrations → Webhooks → Nouveau → Copier l'URL (à coller dans **Réglages** du site)        | —                       |
+| Resend          | Créer un compte, générer une clé API                                                                            | `RESEND_API_KEY`        |
+| Healthchecks.io | Créer un check « worker » : période 1 min, délai de grâce 5 min ; ajouter ton email en canal                    | `HEALTHCHECKS_PING_URL` |
+| ntfy            | Chacun choisit un sujet (https://ntfy.sh/…) dans **Réglages** ; serveur auto-hébergé : déclarer son nom d'hôte  | `NTFY_HOSTS`            |
+| Telegram        | Facultatif : créer un robot avec @BotFather, copier son jeton ; chacun saisit son identifiant dans **Réglages** | `TELEGRAM_BOT_TOKEN`    |
 
 Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte Resend : les alertes par email ne
 partiront que vers toi. Pour que les personnes invitées reçoivent aussi leurs emails, vérifie un domaine
@@ -136,7 +154,9 @@ de prix sont évaluées sur ces cotes différées. Pour du temps réel, voir le 
 
 **Alerte « Source de prix indisponible »** (Discord/email) : Yahoo ne répond plus depuis plus de 5 minutes en séance.
 Regarder `docker compose logs worker`. Si l'API a changé de format, le smoke test nocturne de GitHub (« Smoke test Yahoo »)
-échouera aussi. Plan B : implémenter l'interface `PriceProvider` (`packages/providers/src/types.ts`) pour EODHD ou
+échouera aussi. **Secours automatique** : avec `EODHD_API_KEY` dans `.env`, le worker prend ses cotes chez EODHD
+après 3 échecs consécutifs de Yahoo (pendant 15 minutes, puis retente Yahoo) ; les logs le signalent
+(« source de prix basculée »). L'historique et la recherche restent sur Yahoo. Plan B durable : implémenter l'interface `PriceProvider` (`packages/providers/src/types.ts`) pour EODHD ou
 Twelve Data (plan Grow, 29 $/mois pour l'Europe), et remplacer `new YahooProvider()` dans `apps/worker/src/index.ts`
 et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 
@@ -144,3 +164,13 @@ et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 
 **Le site ne répond plus** : `docker compose logs web`, puis, depuis `/opt`, `scripts/status.sh` (route publiée ?
 alias réseau correct ?) et `docker logs caddy`, puis `sudo opt-deploy bourse-tracker`.
+
+**Courbe en escalier sur les périodes anciennes** (avant le correctif `b8b6d50`, l'historique des ordres de plus
+d'un an était rempli en barres **mensuelles**) : vider une fois les clôtures, le worker les recharge en journalier à
+son cycle suivant (une minute, en séance ou non).
+
+```sql
+delete from public.price_history;  -- SQL Editor de Supabase ; aucune donnée saisie n'est perdue
+```
+
+puis `docker compose restart worker`.

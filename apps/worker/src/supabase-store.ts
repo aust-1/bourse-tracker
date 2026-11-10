@@ -1,9 +1,16 @@
-import { parisDate, type Order } from '@bourse/core';
+import {
+  adjustForSplits,
+  adjustOrdersBySplits,
+  parisDate,
+  type Order,
+  type Split,
+} from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AlertEventRow,
   AlertRow,
+  CycleRecord,
   Store,
   StoredQuote,
   TrackedInstrument,
@@ -23,6 +30,15 @@ export function must<T>(
 export class SupabaseStore implements Store {
   constructor(readonly db: Db) {}
 
+  /** Comptes désactivés par l'administrateur : ni alertes, ni résumés, ni messages système. */
+  private async disabledUsers(): Promise<Set<string>> {
+    const rows = must(
+      await this.db.from('profiles').select('user_id').not('disabled_at', 'is', null),
+      'lecture des comptes désactivés',
+    );
+    return new Set(rows.map((r) => r.user_id));
+  }
+
   async listTrackedInstruments(): Promise<TrackedInstrument[]> {
     const [orders, alerts] = await Promise.all([
       // paginé : au-delà de 1 000 ordres, une lecture simple ignorerait des instruments
@@ -33,17 +49,34 @@ export class SupabaseStore implements Store {
     ]);
     const ids = new Set([
       ...orders.map((o) => o.instrument_id),
-      ...must(alerts, 'lecture des alertes').map((a) => a.instrument_id),
+      // les alertes de portefeuille n'ont pas d'instrument
+      ...must(alerts, 'lecture des alertes').flatMap((a) =>
+        a.instrument_id ? [a.instrument_id] : [],
+      ),
     ]);
     if (ids.size === 0) return [];
     const rows = must(
       await this.db
         .from('instruments')
-        .select('id, yahoo_symbol, name')
+        .select('id, yahoo_symbol, name, asset_type')
         .in('id', [...ids]),
       'lecture des instruments',
     );
-    return rows.map((r) => ({ id: r.id, symbol: r.yahoo_symbol, name: r.name }));
+    return rows.map((r) => ({
+      id: r.id,
+      symbol: r.yahoo_symbol,
+      name: r.name,
+      assetType: r.asset_type as TrackedInstrument['assetType'],
+    }));
+  }
+
+  async setAssetType(instrumentId: string, type: 'etf' | 'equity'): Promise<void> {
+    const { error } = await this.db
+      .from('instruments')
+      .update({ asset_type: type })
+      .eq('id', instrumentId)
+      .is('asset_type', null);
+    if (error) throw new Error(`type d'actif : ${error.message}`);
   }
 
   async getQuotes(ids: readonly string[]): Promise<Map<string, StoredQuote>> {
@@ -94,10 +127,15 @@ export class SupabaseStore implements Store {
     return rows[0]?.close ?? null;
   }
 
-  async recordCycle(result: { error: string | null }): Promise<void> {
+  async recordCycle(result: CycleRecord): Promise<void> {
+    const now = new Date().toISOString();
     const { error } = await this.db
       .from('worker_status')
-      .update({ last_cycle_at: new Date().toISOString(), last_error: result.error })
+      .update({
+        last_cycle_at: now,
+        last_error: result.error,
+        ...(result.failed ? { last_poll_at: now, failed: result.failed } : {}),
+      })
       .eq('id', 1);
     if (error) throw new Error(`worker_status : ${error.message}`);
   }
@@ -151,22 +189,57 @@ export class SupabaseStore implements Store {
     }
   }
 
-  async listActiveAlerts(): Promise<AlertRow[]> {
-    const rows = must(
-      await this.db
-        .from('alerts')
-        .select('id, user_id, instrument_id, type, threshold, channels')
-        .eq('status', 'active'),
-      'lecture des alertes actives',
-    );
-    return rows.map((r) => ({
-      id: r.id,
-      userId: r.user_id,
-      instrumentId: r.instrument_id,
-      type: r.type,
-      threshold: r.threshold,
-      channels: r.channels,
-    }));
+  private async alertsWith(filter: 'active' | 'rearmable', what: string): Promise<AlertRow[]> {
+    let q = this.db
+      .from('alerts')
+      .select(
+        'id, user_id, instrument_id, type, threshold, channels, note, rearm_minutes, reference_value, last_triggered_at',
+      );
+    q =
+      filter === 'active'
+        ? q.eq('status', 'active')
+        : q.eq('status', 'triggered').not('rearm_minutes', 'is', null);
+    const rows = must(await q, what);
+    const disabled = await this.disabledUsers();
+    return rows
+      .filter((r) => !disabled.has(r.user_id))
+      .map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        instrumentId: r.instrument_id,
+        type: r.type,
+        threshold: r.threshold,
+        channels: r.channels,
+        note: r.note,
+        rearmMinutes: r.rearm_minutes,
+        referenceValue: r.reference_value,
+        lastTriggeredAt: r.last_triggered_at,
+      }));
+  }
+
+  listActiveAlerts(): Promise<AlertRow[]> {
+    return this.alertsWith('active', 'lecture des alertes actives');
+  }
+
+  listRearmableAlerts(): Promise<AlertRow[]> {
+    return this.alertsWith('rearmable', 'lecture des alertes à réarmer');
+  }
+
+  async rearmAlert(alertId: string): Promise<void> {
+    const { error } = await this.db
+      .from('alerts')
+      .update({ status: 'active', reference_value: null })
+      .eq('id', alertId)
+      .eq('status', 'triggered');
+    if (error) throw new Error(`réarmement de l'alerte : ${error.message}`);
+  }
+
+  async updateAlertReference(alertId: string, value: number): Promise<void> {
+    const { error } = await this.db
+      .from('alerts')
+      .update({ reference_value: value })
+      .eq('id', alertId);
+    if (error) throw new Error(`plus haut de l'alerte : ${error.message}`);
   }
 
   async getOrders(userId: string, instrumentId: string): Promise<Order[]> {
@@ -179,14 +252,17 @@ export class SupabaseStore implements Store {
         .order('id')
         .range(from, to),
     );
-    return rows.map((o) => ({
-      id: o.id,
-      side: o.side,
-      quantity: o.quantity,
-      unitPrice: o.unit_price,
-      fees: o.fees,
-      executedAt: o.executed_at,
-    }));
+    return adjustForSplits(
+      rows.map((o) => ({
+        id: o.id,
+        side: o.side,
+        quantity: o.quantity,
+        unitPrice: o.unit_price,
+        fees: o.fees,
+        executedAt: o.executed_at,
+      })),
+      await this.splits(instrumentId),
+    );
   }
 
   async claimAlert(alertId: string, at: Date): Promise<boolean> {
@@ -231,7 +307,49 @@ export class SupabaseStore implements Store {
       summaryEnabled: r.summary_enabled,
       summaryTime: r.summary_time,
       lastSummaryOn: r.last_summary_on,
+      reportFrequency: r.report_frequency as UserSettings['reportFrequency'],
+      lastReportOn: r.last_report_on,
+      ntfyUrl: r.ntfy_url,
+      telegramChatId: r.telegram_chat_id,
     };
+  }
+
+  async markReportSent(userId: string, day: string): Promise<void> {
+    const { error } = await this.db
+      .from('settings')
+      .update({ last_report_on: day })
+      .eq('user_id', userId);
+    if (error) throw new Error(`consignation du rapport : ${error.message}`);
+  }
+
+  async getCloses(instrumentIds: readonly string[], fromDate: string) {
+    if (instrumentIds.length === 0) return [];
+    const rows = await fetchAll((from, to) =>
+      this.db
+        .from('price_history')
+        .select('instrument_id, date, close')
+        .in('instrument_id', [...instrumentIds])
+        .gte('date', fromDate)
+        .order('instrument_id')
+        .order('date')
+        .range(from, to),
+    );
+    return rows.map((r) => ({ instrumentId: r.instrument_id, date: r.date, close: r.close }));
+  }
+
+  async listIncome(userId: string) {
+    const rows = must(
+      await this.db
+        .from('cash_movements')
+        .select('kind, amount, occurred_on')
+        .eq('user_id', userId)
+        .in('kind', ['dividend', 'fee']),
+      'lecture des revenus',
+    );
+    return rows.map((r) => ({
+      date: r.occurred_on,
+      amount: r.kind === 'dividend' ? Number(r.amount) : -Number(r.amount),
+    }));
   }
 
   async getSettings(userId: string): Promise<UserSettings | null> {
@@ -253,14 +371,30 @@ export class SupabaseStore implements Store {
         .order('id')
         .range(from, to),
     );
-    return rows.map((o) => ({
-      id: o.id,
-      instrumentId: o.instrument_id,
-      side: o.side,
-      quantity: o.quantity,
-      unitPrice: o.unit_price,
-      fees: o.fees,
-      executedAt: o.executed_at,
+    return adjustOrdersBySplits(
+      rows.map((o) => ({
+        id: o.id,
+        instrumentId: o.instrument_id,
+        side: o.side,
+        quantity: o.quantity,
+        unitPrice: o.unit_price,
+        fees: o.fees,
+        executedAt: o.executed_at,
+      })),
+      await this.splits(),
+    );
+  }
+
+  /** Splits (d'un instrument, ou de tous) : les ordres sont convertis en titres d'après. */
+  private async splits(instrumentId?: string): Promise<Split[]> {
+    let q = this.db.from('splits').select('instrument_id, effective_on, ratio_from, ratio_to');
+    if (instrumentId) q = q.eq('instrument_id', instrumentId);
+    const rows = must(await q, 'lecture des splits');
+    return rows.map((s) => ({
+      instrumentId: s.instrument_id,
+      effectiveOn: s.effective_on,
+      from: s.ratio_from,
+      to: s.ratio_to,
     }));
   }
 
@@ -280,7 +414,7 @@ export class SupabaseStore implements Store {
             {
               type: r.alerts.type,
               threshold: r.alerts.threshold,
-              instrumentName: r.alerts.instruments?.name ?? '?',
+              instrumentName: r.alerts.instruments?.name ?? 'Portefeuille',
               value: r.value_at_trigger,
               triggeredAt: new Date(r.triggered_at),
             },
@@ -299,12 +433,13 @@ export class SupabaseStore implements Store {
 
   async listSettings(): Promise<UserSettings[]> {
     const rows = must(await this.db.from('settings').select('*'), 'lecture des réglages');
-    return rows.map((r) => this.toSettings(r));
+    const disabled = await this.disabledUsers();
+    return rows.filter((r) => !disabled.has(r.user_id)).map((r) => this.toSettings(r));
   }
 
   async listAdminSettings(): Promise<UserSettings[]> {
     const admins = must(
-      await this.db.from('profiles').select('user_id').eq('is_admin', true),
+      await this.db.from('profiles').select('user_id').eq('is_admin', true).is('disabled_at', null),
       'lecture des administrateurs',
     );
     if (admins.length === 0) return [];

@@ -104,6 +104,19 @@ describe('HistoryJob', () => {
     expect(today?.close).toBe(705.5);
   });
 
+  it('séance raccourcie du 24 décembre : clôture de 14:05 enregistrée', async () => {
+    const { store, job } = setup(rows);
+    await job.tick(new Date('2026-12-24T09:00:00Z'), []);
+    const closing: FreshQuote = {
+      instrument: inst,
+      price: 710,
+      prevClose: 705,
+      quotedAt: new Date('2026-12-24T13:05:00Z'), // 14:05 Paris
+    };
+    await job.tick(new Date('2026-12-24T13:15:00Z'), [closing]); // 14:15 Paris
+    expect(store.closes.get('i1')!.find((c) => c.date === '2026-12-24')?.close).toBe(710);
+  });
+
   it("ignore une cote qui n'est pas celle de la clôture", async () => {
     const { store, job } = setup(rows);
     await job.tick(monday10h, []);

@@ -2,6 +2,7 @@ import type { Order } from '@bourse/core';
 import type {
   AlertEventRow,
   AlertRow,
+  CycleRecord,
   Store,
   StoredQuote,
   TrackedInstrument,
@@ -13,7 +14,7 @@ export class MemoryStore implements Store {
   tracked: TrackedInstrument[] = [];
   quotes = new Map<string, StoredQuote>();
   closes = new Map<string, { date: string; close: number }[]>();
-  cycles: { error: string | null }[] = [];
+  cycles: CycleRecord[] = [];
   upserts = 0;
 
   async listTrackedInstruments() {
@@ -29,12 +30,18 @@ export class MemoryStore implements Store {
     this.quotes.set(q.instrumentId, { ...q, fetchedAt: new Date() });
   }
 
+  assetTypes = new Map<string, 'etf' | 'equity'>();
+
+  async setAssetType(instrumentId: string, type: 'etf' | 'equity') {
+    if (!this.assetTypes.has(instrumentId)) this.assetTypes.set(instrumentId, type);
+  }
+
   async getPrevCloseFallback(instrumentId: string, beforeDate: string) {
     const rows = (this.closes.get(instrumentId) ?? []).filter((c) => c.date < beforeDate);
     return rows.length ? rows[rows.length - 1]!.close : null;
   }
 
-  async recordCycle(result: { error: string | null }) {
+  async recordCycle(result: CycleRecord) {
     this.cycles.push(result);
   }
 
@@ -72,11 +79,29 @@ export class MemoryStore implements Store {
     return this.orders.filter((o) => o.userId === userId && o.instrumentId === instrumentId);
   }
 
-  async claimAlert(alertId: string) {
+  async claimAlert(alertId: string, at: Date = new Date()) {
     const a = this.alerts.find((x) => x.id === alertId);
     if (!a || a.status !== 'active') return false;
     a.status = 'triggered';
+    a.lastTriggeredAt = at.toISOString();
     return true;
+  }
+
+  async listRearmableAlerts() {
+    return this.alerts.filter((a) => a.status === 'triggered' && a.rearmMinutes != null);
+  }
+
+  async rearmAlert(alertId: string) {
+    const a = this.alerts.find((x) => x.id === alertId);
+    if (a && a.status === 'triggered') {
+      a.status = 'active';
+      a.referenceValue = null;
+    }
+  }
+
+  async updateAlertReference(alertId: string, value: number) {
+    const a = this.alerts.find((x) => x.id === alertId);
+    if (a) a.referenceValue = value;
   }
 
   async releaseAlert(alertId: string) {
@@ -122,5 +147,26 @@ export class MemoryStore implements Store {
     this.summariesSent.push({ userId, day });
     const s = this.settings.find((x) => x.userId === userId);
     if (s) s.lastSummaryOn = day;
+  }
+
+  reportsSent: { userId: string; day: string }[] = [];
+  income = new Map<string, { date: string; amount: number }[]>();
+
+  async markReportSent(userId: string, day: string) {
+    this.reportsSent.push({ userId, day });
+    const s = this.settings.find((x) => x.userId === userId);
+    if (s) s.lastReportOn = day;
+  }
+
+  async getCloses(instrumentIds: readonly string[], fromDate: string) {
+    return instrumentIds.flatMap((id) =>
+      (this.closes.get(id) ?? [])
+        .filter((c) => c.date >= fromDate)
+        .map((c) => ({ instrumentId: id, date: c.date, close: c.close })),
+    );
+  }
+
+  async listIncome(userId: string) {
+    return this.income.get(userId) ?? [];
   }
 }

@@ -29,6 +29,8 @@ describe('parseAlertForm', () => {
       type: 'price_above',
       threshold: 105.5,
       channels: ['discord'],
+      note: null,
+      rearmMinutes: null,
     });
   });
 
@@ -54,5 +56,42 @@ describe('parseAlertForm', () => {
     const r = parseAlertForm(form({ ...valid, ...patch }));
     expect(r.data).toBeUndefined();
     expect(r.error).toMatch(msg);
+  });
+});
+
+describe('alertes enrichies', () => {
+  it('portefeuille : pas de titre requis, symbole ignoré', () => {
+    const r = parseAlertForm(
+      form({ ...valid, symbol: '', type: 'portfolio_value_below', magnitude: '10 000' }),
+    );
+    expect(r.data).toMatchObject({
+      symbol: null,
+      type: 'portfolio_value_below',
+      threshold: 10_000,
+    });
+    expect(
+      parseAlertForm(form({ ...valid, type: 'portfolio_day_change_down', magnitude: '2' })).data,
+    ).toMatchObject({ symbol: null, threshold: -2 });
+  });
+
+  it('titre requis pour une alerte de titre', () => {
+    expect(parseAlertForm(form({ ...valid, symbol: '' })).error).toBe('Choisis un instrument');
+  });
+
+  it('baisse depuis le plus haut : seuil négatif ; note et réarmement', () => {
+    const r = parseAlertForm(
+      form({
+        ...valid,
+        type: 'drawdown_from_high',
+        magnitude: '10',
+        note: ' stop ',
+        rearm: '1440',
+      }),
+    );
+    expect(r.data).toMatchObject({ threshold: -10, note: 'stop', rearmMinutes: 1440 });
+  });
+
+  it('délai de réarmement hors liste refusé', () => {
+    expect(parseAlertForm(form({ ...valid, rearm: '7' })).error).toContain('réarmement');
   });
 });

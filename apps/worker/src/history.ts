@@ -1,4 +1,4 @@
-import { parisDate, parisMinutes } from '@bourse/core';
+import { closeMinutes, isTradingDay, parisDate, parisMinutes } from '@bourse/core';
 import type { DailyClose, PriceProvider } from '@bourse/providers';
 import type { Logger } from './log';
 import type { FreshQuote } from './poll';
@@ -11,14 +11,10 @@ interface Deps {
 }
 
 const DAY_MS = 24 * 3600 * 1000;
-/** À partir de 17:35 (Paris), la cote de l'enchère de clôture est la clôture officielle. */
-const CLOSE_MINUTES = 17 * 60 + 35;
 const REFRESH_AFTER_MINUTES = 18 * 60;
 
-const isWeekday = (day: string) => {
-  const d = new Date(`${day}T12:00:00Z`).getUTCDay();
-  return d !== 0 && d !== 6;
-};
+/** 5 min après la clôture (Paris), la cote de l'enchère de clôture est la clôture officielle. */
+const closeFinished = (day: string, minutes: number) => minutes >= closeMinutes(day) + 5;
 
 export function historyRange(firstOrderDate: string, now: Date): '1mo' | '1y' | 'max' {
   const days = (now.getTime() - Date.parse(`${firstOrderDate}T00:00:00Z`)) / DAY_MS;
@@ -50,7 +46,7 @@ export class HistoryJob {
   /** Écarte la clôture du jour tant que la séance n'est pas terminée (valeur partielle). */
   private usable(rows: readonly DailyClose[], now: Date): DailyClose[] {
     const today = parisDate(now);
-    const finished = parisMinutes(now) >= CLOSE_MINUTES;
+    const finished = closeFinished(today, parisMinutes(now));
     return rows.filter((r) => r.date < today || (r.date === today && finished));
   }
 
@@ -92,7 +88,7 @@ export class HistoryJob {
   private async refreshRecent(now: Date) {
     const { store, log } = this.deps;
     const day = parisDate(now);
-    const after = isWeekday(day) && parisMinutes(now) >= REFRESH_AFTER_MINUTES;
+    const after = isTradingDay(day) && parisMinutes(now) >= REFRESH_AFTER_MINUTES;
     const key = `${day}:${after ? 'pm' : 'am'}`;
     if (this.refreshKey !== null && !(after && this.refreshKey !== key)) return;
     this.refreshKey = key;
@@ -114,13 +110,16 @@ export class HistoryJob {
   private async storeTodayClose(now: Date, quotes: readonly FreshQuote[]) {
     const day = parisDate(now);
     const minutes = parisMinutes(now);
-    if (!isWeekday(day) || minutes < CLOSE_MINUTES || minutes >= REFRESH_AFTER_MINUTES) return;
+    const close = closeMinutes(day);
+    if (!isTradingDay(day) || !closeFinished(day, minutes) || minutes >= REFRESH_AFTER_MINUTES) {
+      return;
+    }
 
     for (const q of quotes) {
       const key = `${q.instrument.id}:${day}:${q.price}`;
       if (this.closeStored.has(key)) continue;
       // uniquement une cote de l'enchère de clôture du jour
-      if (parisDate(q.quotedAt) !== day || parisMinutes(q.quotedAt) < 17 * 60 + 30) continue;
+      if (parisDate(q.quotedAt) !== day || parisMinutes(q.quotedAt) < close) continue;
       await this.deps.store.upsertCloses([
         { instrumentId: q.instrument.id, date: day, close: q.price },
       ]);

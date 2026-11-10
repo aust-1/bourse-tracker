@@ -2,43 +2,64 @@ import type { AlertType } from './types';
 
 export interface AlertRule {
   type: AlertType;
-  /** Signé, comparé tel quel : *_above → valeur ≥ seuil ; *_below / day_change_down → valeur ≤ seuil. */
+  /** Signé, comparé tel quel : *_above / *_up → valeur ≥ seuil ; les autres → valeur ≤ seuil. */
   threshold: number;
 }
 
 export interface AlertContext {
-  price: number;
+  /** Cours du titre (alertes de titre) */
+  price?: number;
   /** Clôture de la veille, null si inconnue. */
-  prevClose: number | null;
+  prevClose?: number | null;
   /** PRU de la position, null si aucune position. */
-  avgCost: number | null;
+  avgCost?: number | null;
+  /** Plus haut observé depuis la création ou le réarmement (baisse depuis le plus haut) */
+  high?: number | null;
+  /** Valeur du portefeuille en EUR (alertes de portefeuille) */
+  portfolioValue?: number | null;
+  /** Variation du jour du portefeuille en pourcents */
+  portfolioDayPct?: number | null;
 }
 
 export interface AlertResult {
   triggered: boolean;
-  /** Valeur mesurée : prix (EUR) ou pourcentage. null si non calculable. */
+  /** Valeur mesurée : prix ou montant (EUR), ou pourcentage. null si non calculable. */
   value: number | null;
 }
+
+const ratioPct = (a: number | undefined, b: number | null | undefined) =>
+  a !== undefined && b && b > 0 ? (a / b - 1) * 100 : null;
 
 /** Valeur surveillée pour ce type d'alerte, ou null si les données manquent. */
 export function alertValue(type: AlertType, ctx: AlertContext): number | null {
   switch (type) {
     case 'price_above':
     case 'price_below':
-      return ctx.price;
+      return ctx.price ?? null;
     case 'day_change_up':
     case 'day_change_down':
-      return ctx.prevClose && ctx.prevClose > 0 ? (ctx.price / ctx.prevClose - 1) * 100 : null;
+      return ratioPct(ctx.price, ctx.prevClose);
     case 'position_pl_above':
     case 'position_pl_below':
-      return ctx.avgCost && ctx.avgCost > 0 ? (ctx.price / ctx.avgCost - 1) * 100 : null;
+      return ratioPct(ctx.price, ctx.avgCost);
+    case 'drawdown_from_high':
+      return ratioPct(ctx.price, ctx.high);
+    case 'portfolio_value_above':
+    case 'portfolio_value_below':
+      return ctx.portfolioValue ?? null;
+    case 'portfolio_day_change_up':
+    case 'portfolio_day_change_down':
+      return ctx.portfolioDayPct ?? null;
   }
 }
 
+/** Unité de la valeur mesurée : montant en euros ou pourcentage. */
+export const alertUnit = (t: AlertType): 'eur' | 'pct' =>
+  t.startsWith('price') || t.startsWith('portfolio_value') ? 'eur' : 'pct';
+
 const TOLERANCE = 1e-9;
 
-const isAbove = (t: AlertType) =>
-  t === 'price_above' || t === 'day_change_up' || t === 'position_pl_above';
+const isAbove = (t: AlertType) => t.endsWith('_above') || t.endsWith('_up');
 
 export function evaluateAlert(rule: AlertRule, ctx: AlertContext): AlertResult {
   const value = alertValue(rule.type, ctx);
@@ -48,4 +69,22 @@ export function evaluateAlert(rule: AlertRule, ctx: AlertContext): AlertResult {
     ? value >= rule.threshold - TOLERANCE
     : value <= rule.threshold + TOLERANCE;
   return { triggered, value };
+}
+
+/** Nouveau plus haut de référence (baisse depuis le plus haut) après une cote. */
+export const nextHigh = (high: number | null, price: number) =>
+  high === null || price > high ? price : high;
+
+/**
+ * Une alerte déclenchée se réarme quand son délai est écoulé ET que la condition est redevenue
+ * fausse : pas de rafale de notifications tant que la situation dure.
+ */
+export function shouldRearm(
+  a: { rearmMinutes: number | null; lastTriggeredAt: string | null },
+  stillTriggered: boolean,
+  now: Date,
+): boolean {
+  if (a.rearmMinutes === null || !a.lastTriggeredAt) return false;
+  const due = new Date(a.lastTriggeredAt).getTime() + a.rearmMinutes * 60_000;
+  return now.getTime() >= due && !stillTriggered;
 }

@@ -1,3 +1,4 @@
+import type { AlertType } from '@bourse/core';
 import { describe, expect, it, vi } from 'vitest';
 import { evaluateAlerts } from './alerts';
 import { silentLogger } from './log';
@@ -16,7 +17,7 @@ const quote = (price: number, prevClose: number | null = 100): FreshQuote => ({
   quotedAt: inSession,
 });
 
-const setup = (type: 'price_above' | 'day_change_up' | 'position_pl_above', threshold: number) => {
+const setup = (type: AlertType, threshold: number) => {
   const store = new MemoryStore();
   store.alerts = [
     {
@@ -171,5 +172,73 @@ describe('evaluateAlerts', () => {
     const notifier = notifierReturning({ discord: 'sent' });
     await evaluateAlerts([quote(200)], { store, notifier, log: silentLogger, now: inSession });
     expect(notifier.notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('alertes enrichies', () => {
+  const run = (store: MemoryStore, price: number, now = inSession) =>
+    evaluateAlerts([quote(price)], {
+      store,
+      notifier: notifierReturning({ discord: 'sent' }),
+      log: silentLogger,
+      now,
+    });
+
+  it('baisse depuis le plus haut : le plus haut suit le cours, puis la baisse déclenche', async () => {
+    const store = setup('drawdown_from_high', -10);
+    await run(store, 100);
+    expect(store.alerts[0]!.referenceValue).toBe(100);
+    await run(store, 120);
+    expect(store.alerts[0]!.referenceValue).toBe(120);
+    expect((await run(store, 109)).triggered).toBe(0);
+    expect((await run(store, 108)).triggered).toBe(1); // 108 / 120 − 1 = −10 %
+  });
+
+  it('portefeuille : valeur totale sous un seuil, note rappelée', async () => {
+    const store = setup('portfolio_value_below', 1500);
+    store.alerts[0]!.instrumentId = null;
+    store.alerts[0]!.note = 'vérifier le stop';
+    store.orders = [
+      {
+        id: 'o1',
+        userId: 'u1',
+        instrumentId: 'i1',
+        side: 'buy',
+        quantity: 10,
+        unitPrice: 100,
+        fees: 0,
+        executedAt: '2026-01-05T09:00:00Z',
+      },
+    ];
+    const notifier = notifierReturning({ discord: 'sent' });
+    const r = await evaluateAlerts([quote(149)], {
+      store,
+      notifier,
+      log: silentLogger,
+      now: inSession,
+    });
+    expect(r.triggered).toBe(1);
+    const message = notifier.notify.mock.calls[0]![2];
+    expect(message.title).toContain('Portefeuille');
+    expect(message.body).toContain('vérifier le stop');
+  });
+
+  it("réarmement : après le délai, seulement quand la condition n'est plus vraie", async () => {
+    const store = setup('price_above', 105);
+    store.alerts[0]!.rearmMinutes = 60;
+    await run(store, 106);
+    expect(store.alerts[0]!.status).toBe('triggered');
+
+    const later = new Date(inSession.getTime() + 61 * 60_000);
+    expect((await run(store, 107, later)).rearmed).toBe(0); // toujours au-dessus
+    expect((await run(store, 104, later)).rearmed).toBe(1);
+    expect(store.alerts[0]!.status).toBe('active');
+  });
+
+  it('sans délai : pas de réarmement automatique', async () => {
+    const store = setup('price_above', 105);
+    await run(store, 106);
+    const muchLater = new Date(inSession.getTime() + 3 * 3600_000);
+    expect((await run(store, 100, muchLater)).rearmed).toBe(0);
   });
 });

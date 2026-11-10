@@ -20,6 +20,7 @@ export async function saveOrder(
 ): Promise<OrderFormState> {
   const { data, error } = parseOrderForm(formData);
   if (!data) return { error, values: snapshot(formData) };
+  if (!data.portfolioId) return { error: 'Choisis un portefeuille', values: snapshot(formData) };
 
   const supabase = await createClient();
   const inst = await ensureInstrument(supabase, data.symbol);
@@ -33,6 +34,7 @@ export async function saveOrder(
     fees: data.fees,
     executed_at: data.executedAt.toISOString(),
     note: data.note,
+    portfolio_id: data.portfolioId,
   };
   const res = id
     ? await supabase.from('orders').update(row).eq('id', id)

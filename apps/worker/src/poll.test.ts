@@ -34,6 +34,18 @@ describe('pollCycle', () => {
     expect(r.quotes).toHaveLength(2);
   });
 
+  it("complète le type d'actif fourni par la source", async () => {
+    const store = setup();
+    store.tracked[1] = { ...store.tracked[1]!, assetType: 'equity' };
+    const provider = {
+      getQuote: async (s: string) => quote(s, { type: 'etf' }),
+    };
+    await pollCycle({ store, provider, log: silentLogger });
+    expect(store.assetTypes.get('i1')).toBe('etf');
+    // déjà connu : pas réécrit
+    expect(store.assetTypes.has('i2')).toBe(false);
+  });
+
   it("n'écrit rien quand la cote n'a pas changé", async () => {
     const store = setup();
     const provider = { getQuote: async (s: string) => quote(s) };

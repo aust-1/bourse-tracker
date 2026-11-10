@@ -73,6 +73,15 @@ export async function pollCycle({
       });
       updated++;
     }
+    // type d'actif (répartition ETF / actions) : complété une fois, sans bloquer la cote
+    if (q.type && !instrument.assetType) {
+      await store
+        .setAssetType(instrument.id, q.type)
+        .catch((e: unknown) =>
+          log.warn("type d'actif non enregistré", { symbol: q.symbol, error: String(e) }),
+        );
+      instrument.assetType = q.type;
+    }
     fresh.push({ instrument, price: q.price, prevClose, quotedAt: q.quotedAt });
   }
 

@@ -12,7 +12,7 @@ export async function GET() {
       supabase
         .from('orders')
         .select(
-          'side, quantity, unit_price, fees, executed_at, note, instruments(yahoo_symbol, name)',
+          'side, quantity, unit_price, fees, executed_at, note, instruments(yahoo_symbol, name), portfolios(name)',
         )
         .order('executed_at', { ascending: true })
         .order('id')
@@ -32,6 +32,7 @@ export async function GET() {
       unit_price: o.unit_price,
       fees: o.fees,
       note: o.note,
+      portfolio: o.portfolios?.name ?? '',
     })),
   );
   return new NextResponse(csv, {

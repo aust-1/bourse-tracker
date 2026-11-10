@@ -4,8 +4,9 @@ import { evaluateAlerts } from './alerts';
 import type { HistoryJob } from './history';
 import type { Logger } from './log';
 import type { SourceMonitor } from './monitor';
-import { pollCycle, type FreshQuote } from './poll';
+import { pollCycle, type CycleResult, type FreshQuote } from './poll';
 import type { Store } from './store';
+import { sendPeriodicReports } from './report';
 import { sendDailySummaries } from './summary';
 
 /** Hors séance, on ne vérifie les instruments ajoutés qu'à cette cadence. */
@@ -51,11 +52,13 @@ export class Cycle {
 
     let error: string | null = null;
     let quotes: FreshQuote[] = [];
+    let failed: CycleResult['failed'] | undefined;
     try {
       if (polling) {
         const started = Date.now();
         const result = await pollCycle({ store, provider, log });
         quotes = result.quotes;
+        failed = result.failed;
 
         const lags = quotes.map((q) => Math.round((Date.now() - q.quotedAt.getTime()) / 1000));
         log.info('cycle terminé', {
@@ -79,11 +82,12 @@ export class Cycle {
 
       await history.tick(now, quotes).catch(guarded(log, 'historique'));
       await sendDailySummaries({ store, notifier, log, now }).catch(guarded(log, 'résumé'));
+      await sendPeriodicReports({ store, notifier, log, now }).catch(guarded(log, 'rapport'));
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
       throw e;
     } finally {
-      await store.recordCycle({ error }).catch(guarded(log, 'worker_status'));
+      await store.recordCycle({ error, failed }).catch(guarded(log, 'worker_status'));
     }
     return { ran: true };
   }

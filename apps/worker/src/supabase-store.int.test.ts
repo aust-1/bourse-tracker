@@ -18,6 +18,7 @@ const db = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
 describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base locale)', () => {
   let instrumentId: string;
   let userId: string;
+  let portfolioId: string;
 
   beforeAll(async () => {
     await db.from('alerts').delete().not('id', 'is', null);
@@ -27,6 +28,8 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     await db.from('instruments').delete().not('id', 'is', null);
 
     userId = await ensureUser(db, 'int@bourse.local', 'int-password-123');
+    const pf = await db.from('portfolios').select('id').eq('user_id', userId).limit(1).single();
+    portfolioId = pf.data!.id;
 
     const inst = await db
       .from('instruments')
@@ -39,6 +42,7 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
       .insert({ yahoo_symbol: 'IGN.PA', name: 'Ignoré', exchange: 'PAR' });
     await db.from('orders').insert({
       user_id: userId,
+      portfolio_id: portfolioId,
       instrument_id: instrumentId,
       side: 'buy',
       quantity: 1,
@@ -268,6 +272,59 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     }
   });
 
+  it('compte désactivé : ni alertes, ni résumé, ni messages système', async () => {
+    const store = new SupabaseStore(db);
+    await db.from('settings').delete().not('user_id', 'is', null);
+    await db.from('settings').insert({ user_id: userId, email: 'int@example.com' });
+    const alert = await db
+      .from('alerts')
+      .insert({ user_id: userId, instrument_id: instrumentId, type: 'price_above', threshold: 1 })
+      .select('id')
+      .single();
+    const before = await db.from('profiles').select('is_admin').eq('user_id', userId).single();
+    try {
+      await db
+        .from('profiles')
+        .update({ is_admin: true, disabled_at: new Date().toISOString() })
+        .eq('user_id', userId);
+      expect((await store.listActiveAlerts()).map((a) => a.id)).not.toContain(alert.data!.id);
+      expect((await store.listSettings()).map((s) => s.userId)).not.toContain(userId);
+      expect(await store.listAdminSettings()).toEqual([]);
+    } finally {
+      await db
+        .from('profiles')
+        .update({ is_admin: before.data!.is_admin, disabled_at: null })
+        .eq('user_id', userId);
+      await db.from('alerts').delete().eq('id', alert.data!.id);
+    }
+  });
+
+  it('splits : ordres antérieurs convertis en titres d’après la division', async () => {
+    const store = new SupabaseStore(db);
+    const before = await store.getOrders(userId, instrumentId);
+    const split = await db
+      .from('splits')
+      .insert({
+        instrument_id: instrumentId,
+        effective_on: '2026-06-01',
+        ratio_from: 1,
+        ratio_to: 10,
+      })
+      .select('id')
+      .single();
+    try {
+      const after = await store.getOrders(userId, instrumentId);
+      expect(after.map((o) => o.quantity)).toEqual(before.map((o) => o.quantity * 10));
+      expect(after.map((o) => o.unitPrice)).toEqual(before.map((o) => o.unitPrice / 10));
+      const all = await store.listUserOrders(userId);
+      expect(all.find((o) => o.instrumentId === instrumentId)?.quantity).toBe(
+        before[0]!.quantity * 10,
+      );
+    } finally {
+      await db.from('splits').delete().eq('id', split.data!.id);
+    }
+  });
+
   it('pagination : plus de 1 000 ordres ne sont jamais tronqués', async () => {
     const store = new SupabaseStore(db);
     await db.from('orders').delete().not('id', 'is', null);
@@ -283,6 +340,7 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     // 1 200 achats répartis sur 3 instruments : la limite de PostgREST est de 1 000 lignes
     const rows = Array.from({ length: 1200 }, (_, i) => ({
       user_id: userId,
+      portfolio_id: portfolioId,
       instrument_id: ids[i % 3]!,
       side: 'buy' as const,
       quantity: 1,

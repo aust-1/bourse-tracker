@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Fira_Code, VT323 } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
@@ -11,7 +11,23 @@ const vt323 = VT323({
   display: 'swap',
 });
 
-export const metadata: Metadata = { title: 'Bourse Tracker' };
+export const metadata: Metadata = {
+  title: 'Bourse Tracker',
+  applicationName: 'Bourse Tracker',
+  icons: {
+    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  // plein écran une fois ajoutée à l'écran d'accueil d'un iPhone
+  appleWebApp: { capable: true, title: 'Bourse', statusBarStyle: 'black-translucent' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0a0f0a',
+  width: 'device-width',
+  initialScale: 1,
+  // le site reste zoomable (accessibilité)
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

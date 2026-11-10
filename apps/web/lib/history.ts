@@ -1,7 +1,8 @@
-import { buildSnapshots, parisDate, type Snapshot } from '@bourse/core';
+import { buildSnapshots, parisDate, periodCashFlows, twr, xirr, type Snapshot } from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
+import { cachedCloses } from './closes-cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { OrderRow, QuoteRow } from '@bourse/core';
+import type { CashMovement, IncomeFlow, OrderRow, QuoteRow } from '@bourse/core';
 
 export const RANGES = [
   { key: '1m', label: '1 M' },
@@ -28,6 +29,7 @@ export function buildHistory(
   orders: readonly OrderRow[],
   closes: readonly CloseRow[],
   quotes: readonly QuoteRow[],
+  movements: readonly Pick<CashMovement, 'kind' | 'amount' | 'occurredOn'>[] = [],
 ): Snapshot[] {
   if (orders.length === 0) return [];
 
@@ -68,10 +70,22 @@ export function buildHistory(
       closes: byInstrument.get(id) ?? [],
     })),
     dates,
+    incomeFlows(movements),
   );
 }
 
+/** Dividendes (+) et frais hors courtage (−) : les versements et retraits ne sont pas un gain. */
+export function incomeFlows(
+  movements: readonly Pick<CashMovement, 'kind' | 'amount' | 'occurredOn'>[],
+): IncomeFlow[] {
+  return movements
+    .filter((m) => m.kind === 'dividend' || m.kind === 'fee')
+    .map((m) => ({ date: m.occurredOn, amount: m.kind === 'dividend' ? m.amount : -m.amount }));
+}
+
 export interface PeriodStats {
+  /** Dernier point avant la période (null : depuis le début) */
+  base: Snapshot | null;
   /** Points affichés sur la période */
   points: Snapshot[];
   end: Snapshot;
@@ -79,9 +93,18 @@ export interface PeriodStats {
   gain: number;
   /** Gain rapporté à la valeur de départ + apports de la période ; null si base nulle. */
   gainPct: number | null;
-  /** Apports nets de la période (achats moins ventes) */
+  /** Apports nets de la période (achats moins ventes, moins revenus) */
   contributions: number;
+  /** Revenus de la période : dividendes moins frais hors courtage (inclus dans le gain) */
+  income: number;
+  /** Rendement pondéré par le temps (pourcents) : indépendant des apports */
+  twrPct: number | null;
+  /** TRI annualisé (pourcents) ; null sur moins d'un an (une annualisation serait trompeuse) */
+  xirrPct: number | null;
 }
+
+/** En deçà, un TRI annualisé extrapole trop une variation de court terme. */
+export const XIRR_MIN_DAYS = 365;
 
 function shiftMonths(day: string, months: number): string {
   const d = new Date(`${day}T12:00:00Z`);
@@ -123,16 +146,45 @@ export function periodStats(
   const contributions = end.netContributions - baseContrib;
   const gain = end.marketValue - baseValue - contributions;
   const capital = baseValue + contributions;
-  return { points, end, gain, gainPct: capital > 0 ? (gain / capital) * 100 : null, contributions };
+  return {
+    base,
+    points,
+    end,
+    gain,
+    gainPct: capital > 0 ? (gain / capital) * 100 : null,
+    contributions,
+    income: end.income - (base ? base.income : 0),
+    twrPct: twr(points, base),
+    xirrPct:
+      spanDays((base ?? points[0]!).date, end.date) >= XIRR_MIN_DAYS
+        ? xirr(periodCashFlows(points, base))
+        : null,
+  };
+}
+
+function spanDays(from: string, to: string): number {
+  return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
 }
 
 type Client = SupabaseClient<Database>;
 
+/**
+ * Clôtures des instruments, en cache tant que la version des données de marché ne change pas
+ * (voir lib/closes-cache.ts) : l'historique d'un portefeuille ancien compte des milliers de lignes.
+ */
 export async function loadCloses(
   supabase: Client,
   instrumentIds: readonly string[],
 ): Promise<CloseRow[]> {
   if (instrumentIds.length === 0) return [];
+  const { data } = await supabase.from('market_data_version').select('version').maybeSingle();
+  return cachedCloses(instrumentIds, data?.version ?? null, (ids) => fetchCloses(supabase, ids));
+}
+
+async function fetchCloses(
+  supabase: Client,
+  instrumentIds: readonly string[],
+): Promise<CloseRow[]> {
   const rows = await fetchAll((from, to) =>
     supabase
       .from('price_history')

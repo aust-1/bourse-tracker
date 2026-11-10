@@ -1,47 +1,84 @@
-import { computePosition, valuePosition } from '@bourse/core';
+import { adjustForSplits, computePosition, lineReturn, valuePosition } from '@bourse/core';
 import { fetchAll } from '@bourse/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { InstrumentChart } from '@/components/instrument-chart';
 import { Pl } from '@/components/pl';
+import { IsinSection } from '@/components/isin-section';
+import { SplitsSection } from '@/components/splits-section';
 import { dateTime, eur, num } from '@/lib/format';
+import { portfolioScope } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-export default async function InstrumentPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InstrumentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; notice?: string }>;
+}) {
   const { id } = await params;
+  const { error, notice } = await searchParams;
   const supabase = await createClient();
+  const { selected } = await portfolioScope(supabase);
 
-  const [inst, orders, quote] = await Promise.all([
+  const [inst, orders, quote, dividends, splitRows, { data: isAdmin }] = await Promise.all([
     supabase
       .from('instruments')
-      .select('id, yahoo_symbol, name, exchange')
+      .select('id, yahoo_symbol, name, exchange, isin')
       .eq('id', id)
       .maybeSingle(),
-    fetchAll((from, to) =>
-      supabase
+    fetchAll((from, to) => {
+      let q = supabase
         .from('orders')
         .select('id, side, quantity, unit_price, fees, executed_at')
-        .eq('instrument_id', id)
-        .order('executed_at', { ascending: false })
-        .order('id')
-        .range(from, to),
-    ),
+        .eq('instrument_id', id);
+      if (selected) q = q.eq('portfolio_id', selected.id);
+      return q.order('executed_at', { ascending: false }).order('id').range(from, to);
+    }),
     supabase.from('quotes_latest').select('*').eq('instrument_id', id).maybeSingle(),
+    (() => {
+      let q = supabase
+        .from('cash_movements')
+        .select('amount, occurred_on')
+        .eq('instrument_id', id)
+        .eq('kind', 'dividend');
+      if (selected) q = q.eq('portfolio_id', selected.id);
+      return q.order('occurred_on', { ascending: false });
+    })(),
+    supabase
+      .from('splits')
+      .select('id, effective_on, ratio_from, ratio_to')
+      .eq('instrument_id', id)
+      .order('effective_on'),
+    supabase.rpc('is_admin'),
   ]);
   if (!inst.data) notFound();
+  const dividendTotal = (dividends.data ?? []).reduce((s, d) => s + Number(d.amount), 0);
 
-  const myOrders = orders.map((o) => ({
-    id: o.id,
-    side: o.side,
-    quantity: o.quantity,
-    unitPrice: o.unit_price,
-    fees: o.fees,
-    executedAt: o.executed_at,
+  const splits = (splitRows.data ?? []).map((s) => ({
+    instrumentId: id,
+    effectiveOn: s.effective_on,
+    from: s.ratio_from,
+    to: s.ratio_to,
   }));
+  // titres d'après les splits : cohérents avec les cours ajustés du graphique
+  const myOrders = adjustForSplits(
+    orders.map((o) => ({
+      id: o.id,
+      side: o.side,
+      quantity: o.quantity,
+      unitPrice: o.unit_price,
+      fees: o.fees,
+      executedAt: o.executed_at,
+    })),
+    splits,
+  );
   const pos = computePosition(myOrders);
   const v = quote.data ? valuePosition(pos, quote.data.price, quote.data.prev_close) : null;
+  const perf = lineReturn(myOrders, pos, quote.data?.price ?? null, dividendTotal);
 
   return (
     <div className="flex flex-col gap-4">
@@ -92,6 +129,22 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
         <p className="mt-2 text-sm">
           Gain réalisé : <Pl value={pos.realizedPl} />
         </p>
+        {dividendTotal > 0 && (
+          <p className="mt-1 text-sm" data-testid="instrument-dividends">
+            Dividendes reçus : {eur(dividendTotal)} ({dividends.data!.length} versement
+            {dividends.data!.length > 1 ? 's' : ''}, dernier le{' '}
+            {dividends.data![0]!.occurred_on.split('-').reverse().join('/')})
+          </p>
+        )}
+        {perf.invested > 0 && (
+          <p className="mt-1 text-sm" data-testid="line-performance">
+            Performance totale : <Pl value={perf.totalGain} /> <Pl value={perf.pct} kind="pct" />
+            <span className="text-slate-500">
+              {' '}
+              (latent, réalisé et dividendes, sur {eur(perf.invested)} achetés)
+            </span>
+          </p>
+        )}
       </section>
 
       <section className="card">
@@ -117,6 +170,29 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
           <p className="text-sm text-slate-500">Aucun ordre.</p>
         )}
       </section>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      {notice === 'symbol' && (
+        <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+          Symbole changé : le worker récupère la cote au prochain cycle.
+        </p>
+      )}
+      <IsinSection
+        instrumentId={inst.data.id}
+        isin={inst.data.isin}
+        canEdit={!inst.data.isin || !!isAdmin}
+        isAdmin={!!isAdmin}
+        symbol={inst.data.yahoo_symbol}
+      />
+      <SplitsSection
+        instrumentId={inst.data.id}
+        splits={splitRows.data ?? []}
+        isAdmin={!!isAdmin}
+      />
 
       <p className="text-sm">
         <Link href={`/alerts?instrument=${inst.data.id}`} className="underline">

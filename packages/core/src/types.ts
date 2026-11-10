@@ -26,4 +26,12 @@ export type AlertType =
   | 'day_change_up'
   | 'day_change_down'
   | 'position_pl_above'
-  | 'position_pl_below';
+  | 'position_pl_below'
+  | 'drawdown_from_high'
+  | 'portfolio_value_above'
+  | 'portfolio_value_below'
+  | 'portfolio_day_change_up'
+  | 'portfolio_day_change_down';
+
+/** Alerte portant sur le portefeuille entier (sans instrument). */
+export const isPortfolioAlert = (t: AlertType) => t.startsWith('portfolio_');

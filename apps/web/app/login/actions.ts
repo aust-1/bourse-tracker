@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { needsSecondFactor } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 export interface FormState {
@@ -14,8 +15,12 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: 'Identifiants incorrects.' };
-  redirect('/');
+  if (error) {
+    if (error.code === 'user_banned') return { error: 'Ce compte a été désactivé.' };
+    return { error: 'Identifiants incorrects.' };
+  }
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  redirect(needsSecondFactor(aal) ? '/mfa' : '/');
 }
 
 export async function signOut() {

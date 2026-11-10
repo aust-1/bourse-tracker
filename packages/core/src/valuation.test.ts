@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dayPl, valuePosition } from './valuation';
+import { computePosition } from './positions';
+import { dayPl, lineReturn, valuePosition } from './valuation';
 import type { Order } from './types';
 
 const o = (
@@ -77,5 +78,45 @@ describe('dayPl', () => {
     // 2026-09-24T21:30Z = 23:30 à Paris le 24 : détenu à la clôture de la veille
     const orders = [o('a', 'buy', 10, 100, '2026-09-24T21:30:00Z')];
     expect(dayPl(orders, day, 105, 100)).toBeCloseTo(50, 9);
+  });
+});
+
+describe('lineReturn', () => {
+  it('latent + réalisé + dividendes, rapporté aux achats', () => {
+    const orders = [
+      {
+        id: 'a',
+        side: 'buy' as const,
+        quantity: 10,
+        unitPrice: 100,
+        fees: 0,
+        executedAt: '2026-01-05T09:00:00Z',
+      },
+      {
+        id: 'b',
+        side: 'sell' as const,
+        quantity: 4,
+        unitPrice: 120,
+        fees: 0,
+        executedAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+    const pos = computePosition(orders);
+    // latent 6 × (110 − 100) = 60 ; réalisé 4 × 20 = 80 ; dividendes 10
+    const r = lineReturn(orders, pos, 110, 10);
+    expect(r).toEqual({ totalGain: 150, invested: 1000, pct: 15 });
+  });
+  it('sans cote : latent ignoré', () => {
+    const orders = [
+      {
+        id: 'a',
+        side: 'buy' as const,
+        quantity: 1,
+        unitPrice: 50,
+        fees: 1,
+        executedAt: '2026-01-05T09:00:00Z',
+      },
+    ];
+    expect(lineReturn(orders, computePosition(orders), null).totalGain).toBe(0);
   });
 });

@@ -1,4 +1,5 @@
-import { describeCondition } from '@bourse/core';
+import { alertUnit, describeCondition } from '@bourse/core';
+import { CHANNEL_NAMES } from '@/lib/settings';
 import Link from 'next/link';
 import { dateTime, eur, pct } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
@@ -12,7 +13,7 @@ const STATUS = {
   paused: { label: 'En pause', cls: 'text-slate-500' },
 } as const;
 
-const CHANNEL_LABEL: Record<string, string> = { discord: 'Discord', email: 'Email' };
+const CHANNEL_LABEL = CHANNEL_NAMES;
 
 function deliveryText(delivery: unknown): string {
   if (!delivery || typeof delivery !== 'object') return '';
@@ -37,7 +38,7 @@ export default async function AlertsPage({
   let alertsQuery = supabase
     .from('alerts')
     .select(
-      'id, type, threshold, channels, status, last_triggered_at, instruments(id, name, yahoo_symbol)',
+      'id, type, threshold, channels, status, last_triggered_at, note, rearm_minutes, reference_value, instruments(id, name, yahoo_symbol)',
     )
     .order('created_at', { ascending: false });
   if (instrument) alertsQuery = alertsQuery.eq('instrument_id', instrument);
@@ -96,10 +97,23 @@ export default async function AlertsPage({
               return (
                 <tr key={a.id}>
                   <td className="td">
-                    {a.instruments?.name}{' '}
+                    {a.instruments?.name ?? 'Portefeuille'}{' '}
                     <span className="text-xs text-slate-500">{a.instruments?.yahoo_symbol}</span>
                   </td>
-                  <td className="td">{describeCondition(a.type, a.threshold)}</td>
+                  <td className="td">
+                    {describeCondition(a.type, a.threshold)}
+                    {a.type === 'drawdown_from_high' && a.reference_value !== null && (
+                      <div className="text-xs text-slate-500">
+                        plus haut suivi : {eur(a.reference_value)}
+                      </div>
+                    )}
+                    {a.rearm_minutes !== null && (
+                      <div className="text-xs text-slate-500">
+                        réarmement auto. après {rearmLabel(a.rearm_minutes)}
+                      </div>
+                    )}
+                    {a.note && <div className="text-xs text-slate-500">« {a.note} »</div>}
+                  </td>
                   <td className="td">{a.channels.map((c) => CHANNEL_LABEL[c] ?? c).join(', ')}</td>
                   <td className="td">
                     <span className={st.cls}>{st.label}</span>
@@ -144,12 +158,13 @@ export default async function AlertsPage({
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
           {events.data?.map((e) => {
             const a = e.alerts;
-            const isPrice = a?.type.startsWith('price');
+            const isPrice = a ? alertUnit(a.type) === 'eur' : false;
             return (
               <li key={e.id} className="flex flex-col gap-0.5 py-2 text-sm">
                 <span>
                   <span className="text-slate-500">{dateTime(e.triggered_at)}</span> ·{' '}
-                  {a?.instruments?.name} : {a && describeCondition(a.type, a.threshold)} (mesuré :{' '}
+                  {a?.instruments?.name ?? 'Portefeuille'} :{' '}
+                  {a && describeCondition(a.type, a.threshold)} (mesuré :{' '}
                   {isPrice ? eur(e.value_at_trigger) : pct(e.value_at_trigger)})
                 </span>
                 <span className="text-xs text-slate-500">{deliveryText(e.delivery)}</span>
@@ -160,4 +175,10 @@ export default async function AlertsPage({
       </section>
     </div>
   );
+}
+
+function rearmLabel(minutes: number): string {
+  if (minutes % 1440 === 0) return `${minutes / 1440} j`;
+  if (minutes % 60 === 0) return `${minutes / 60} h`;
+  return `${minutes} min`;
 }

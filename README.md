@@ -1,25 +1,54 @@
 # Bourse Tracker
 
 Suivi d'un **PEA** (actions et ETF européens, en EUR) : journal daté de chaque ordre, valeur du
-portefeuille en quasi temps réel, alertes par Discord et email. Plusieurs comptes, sur invitation :
+portefeuille en quasi temps réel, alertes par Discord, email, ntfy ou Telegram. Plusieurs comptes, sur invitation :
 chacun ne voit que ses propres ordres, alertes, réglages et titres.
 
 ## Fonctionnalités
 
 - **Ordres** : saisie manuelle (achat/vente, quantité, prix, frais, date-heure de Paris), modification,
-  suppression, filtres, export CSV. Une vente à découvert est refusée **par la base** elle-même.
+  suppression, filtres (titre, sens, dates), totaux de la sélection, pagination, export et **import CSV**
+  (aperçu ligne par ligne, doublons ignorés, tout ou rien). Une vente à
+  découvert est refusée **par la base** elle-même.
+- **Portefeuilles** : plusieurs enveloppes par compte (PEA, PEA-PME, compte-titres) ; chaque ordre
+  appartient à un portefeuille, la vente à découvert est contrôlée portefeuille par portefeuille et un
+  sélecteur filtre tous les écrans.
+- **Mouvements** : versements, retraits, dividendes et frais ; solde de liquidités, valeur totale
+  (titres + liquidités) et jauges des plafonds de versements (PEA 150 000 €, PEA + PEA-PME 225 000 €).
+- **Divisions de titres** : saisies par l'administrateur sur la fiche du titre ; les ordres antérieurs sont
+  convertis en titres d'après la division (position, PRU, courbes, contrôle du découvert).
+- **Fiscalité du PEA** : ancienneté (date des 5 ans) et estimation de l'impôt d'un retrait total
+  (prélèvements sociaux, plus l'impôt sur le revenu avant 5 ans ; taux réglables).
+- **ISIN et éligibilité** : ISIN saisi sur la fiche du titre (clé de contrôle vérifiée) ; un titre dont
+  l'émetteur est hors EEE est signalé « hors PEA » sur la fiche et sur le tableau de bord d'un PEA.
+  L'administrateur peut changer le symbole Yahoo d'un titre sans rien perdre (fusion si le même ISIN
+  est déjà suivi sous ce symbole).
 - **Tableau de bord en direct** : valeur, variation du jour (tient compte des ordres passés dans la journée),
-  gain latent et réalisé, PRU (méthode du prix moyen pondéré), mise à jour sans rechargement.
+  gain latent et réalisé, PRU (méthode du prix moyen pondéré), répartition par ligne et par type d'actif
+  (ETF, actions, liquidités), mise à jour sans rechargement.
   Badge « Différé de N min » si la cote est ancienne pendant la séance.
-- **Alertes** : seuil de prix (≥ / ≤), variation du jour, gain ou perte sur la position. Elles partent une
-  seule fois, puis se ré-arment d'un clic. Historique avec l'état d'envoi par canal.
+- **Alertes** : seuil de prix (≥ / ≤), variation du jour, gain ou perte sur la position, baisse depuis le
+  plus haut, valeur ou variation du jour du portefeuille entier ; note libre. Elles partent une
+  seule fois, puis se ré-arment d'un clic, ou d'elles-mêmes après un délai choisi une fois la condition
+  levée. Historique avec l'état d'envoi par canal.
 - **Historique** : courbe de la valeur du portefeuille, gain **hors apports** (un achat n'est pas de la
-  performance) et rendement sur 1 M, 3 M, depuis janvier, 1 A ou Tout.
-- **Résumé quotidien** à l'heure choisie, jours de bourse seulement.
+  performance), dividendes compris, rendement pondéré par le temps (TWR) et TRI annualisé (XIRR, sur
+  un an ou plus), sur 1 M, 3 M, depuis janvier, 1 A ou Tout ; comparaison en base 100 à un indice
+  de référence au choix (CAC 40, MSCI World…).
+- **Résumé quotidien** à l'heure choisie, jours de bourse seulement ; **rapport hebdomadaire ou mensuel**
+  le dernier jour de bourse de la période (gain hors apports, TWR, meilleure et pire ligne, alertes).
+- **Source de secours** : avec une clé EODHD, les cotes basculent automatiquement sur EODHD quand Yahoo
+  échoue (disjoncteur : 3 échecs, 15 minutes).
 - **Supervision** : alerte si la source de prix est muette en séance (aux administrateurs), ping
-  Healthchecks.io du worker.
+  Healthchecks.io du worker, page « Supervision » (administrateur) : état du worker, échecs de cotation,
+  fraîcheur de chaque cote.
+- **Application mobile** : installable (PWA : manifeste, icônes), menu compact sur téléphone.
 - **Comptes** : le premier compte est administrateur et crée des liens d'invitation (un compte par lien,
-  7 jours). La base refuse toute inscription sans invitation valide.
+  7 jours). La base refuse toute inscription sans invitation valide. L'administrateur voit tous les
+  comptes et peut en désactiver un (connexion refusée, plus d'alertes ni de résumé).
+- **Sécurité** : mot de passe oublié (lien par email), double authentification TOTP imposée par la base
+  (un compte qui l'a activée n'accède à rien avec son seul mot de passe), export de ses données en JSON
+  et suppression de son compte.
 
 ## Architecture
 
@@ -55,7 +84,7 @@ Prérequis : Node 22+, pnpm, Docker (pour Supabase en local).
 
 ```bash
 pnpm install
-npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta,mailpit
+npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta
 cp .env.example .env   # pour le worker ; le web lit apps/web/.env.local (URL et clé anon locales)
 pnpm --filter @bourse/web dev
 ```

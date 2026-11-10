@@ -78,8 +78,10 @@ export class YahooProvider implements PriceProvider {
     throw lastError instanceof Error ? lastError : new ProviderError('Yahoo: erreur inconnue');
   }
 
-  private async chart(symbol: string, range: string, interval: string): Promise<ChartResult> {
-    const url = `${CHART_URL}/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&includePrePost=false`;
+  /** `period` : une plage Yahoo (1d, 1mo, 1y…) ou des bornes explicites `period1=…&period2=…`. */
+  private async chart(symbol: string, period: string, interval: string): Promise<ChartResult> {
+    const span = period.includes('=') ? period : `range=${period}`;
+    const url = `${CHART_URL}/${encodeURIComponent(symbol)}?${span}&interval=${interval}&includePrePost=false`;
     const json = (await this.getJson(url)) as {
       chart?: { result?: ChartResult[] | null; error?: { description?: string } | null };
     };
@@ -115,11 +117,15 @@ export class YahooProvider implements PriceProvider {
             ? meta.shortName
             : null,
       exchange: typeof meta.exchangeName === 'string' ? meta.exchangeName : null,
+      type:
+        meta.instrumentType === 'ETF' ? 'etf' : meta.instrumentType === 'EQUITY' ? 'equity' : null,
     };
   }
 
   async getDailyCloses(symbol: string, range: '1mo' | '1y' | 'max'): Promise<DailyClose[]> {
-    const r = await this.chart(symbol, range, '1d');
+    // range=max renvoie des barres mensuelles malgré interval=1d : bornes explicites à la place
+    const period = range === 'max' ? `period1=0&period2=${Math.floor(Date.now() / 1000)}` : range;
+    const r = await this.chart(symbol, period, '1d');
     const closes = r.indicators?.quote?.[0]?.close ?? [];
     const out: DailyClose[] = [];
     (r.timestamp ?? []).forEach((t, i) => {

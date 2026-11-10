@@ -68,8 +68,11 @@ export type Database = {
           channels: string[];
           created_at: string;
           id: string;
-          instrument_id: string;
+          instrument_id: string | null;
           last_triggered_at: string | null;
+          note: string | null;
+          rearm_minutes: number | null;
+          reference_value: number | null;
           status: Database['public']['Enums']['alert_status'];
           threshold: number;
           type: Database['public']['Enums']['alert_type'];
@@ -79,8 +82,11 @@ export type Database = {
           channels?: string[];
           created_at?: string;
           id?: string;
-          instrument_id: string;
+          instrument_id?: string | null;
           last_triggered_at?: string | null;
+          note?: string | null;
+          rearm_minutes?: number | null;
+          reference_value?: number | null;
           status?: Database['public']['Enums']['alert_status'];
           threshold: number;
           type: Database['public']['Enums']['alert_type'];
@@ -90,8 +96,11 @@ export type Database = {
           channels?: string[];
           created_at?: string;
           id?: string;
-          instrument_id?: string;
+          instrument_id?: string | null;
           last_triggered_at?: string | null;
+          note?: string | null;
+          rearm_minutes?: number | null;
+          reference_value?: number | null;
           status?: Database['public']['Enums']['alert_status'];
           threshold?: number;
           type?: Database['public']['Enums']['alert_type'];
@@ -107,8 +116,60 @@ export type Database = {
           },
         ];
       };
+      cash_movements: {
+        Row: {
+          amount: number;
+          created_at: string;
+          id: string;
+          instrument_id: string | null;
+          kind: Database['public']['Enums']['cash_kind'];
+          note: string | null;
+          occurred_on: string;
+          portfolio_id: string;
+          user_id: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          id?: string;
+          instrument_id?: string | null;
+          kind: Database['public']['Enums']['cash_kind'];
+          note?: string | null;
+          occurred_on: string;
+          portfolio_id: string;
+          user_id?: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          id?: string;
+          instrument_id?: string | null;
+          kind?: Database['public']['Enums']['cash_kind'];
+          note?: string | null;
+          occurred_on?: string;
+          portfolio_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'cash_movements_instrument_id_fkey';
+            columns: ['instrument_id'];
+            isOneToOne: false;
+            referencedRelation: 'instruments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_movements_portfolio_fk';
+            columns: ['portfolio_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'portfolios';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
       instruments: {
         Row: {
+          asset_type: string | null;
           created_at: string;
           currency: string;
           exchange: string | null;
@@ -118,6 +179,7 @@ export type Database = {
           yahoo_symbol: string;
         };
         Insert: {
+          asset_type?: string | null;
           created_at?: string;
           currency?: string;
           exchange?: string | null;
@@ -127,6 +189,7 @@ export type Database = {
           yahoo_symbol: string;
         };
         Update: {
+          asset_type?: string | null;
           created_at?: string;
           currency?: string;
           exchange?: string | null;
@@ -173,6 +236,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      market_data_version: {
+        Row: {
+          id: number;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          id?: number;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          id?: number;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [];
+      };
       orders: {
         Row: {
           created_at: string;
@@ -181,6 +262,7 @@ export type Database = {
           id: string;
           instrument_id: string;
           note: string | null;
+          portfolio_id: string;
           quantity: number;
           side: Database['public']['Enums']['order_side'];
           unit_price: number;
@@ -193,6 +275,7 @@ export type Database = {
           id?: string;
           instrument_id: string;
           note?: string | null;
+          portfolio_id: string;
           quantity: number;
           side: Database['public']['Enums']['order_side'];
           unit_price: number;
@@ -205,6 +288,7 @@ export type Database = {
           id?: string;
           instrument_id?: string;
           note?: string | null;
+          portfolio_id?: string;
           quantity?: number;
           side?: Database['public']['Enums']['order_side'];
           unit_price?: number;
@@ -218,7 +302,41 @@ export type Database = {
             referencedRelation: 'instruments';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'orders_portfolio_fk';
+            columns: ['portfolio_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'portfolios';
+            referencedColumns: ['id', 'user_id'];
+          },
         ];
+      };
+      portfolios: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: Database['public']['Enums']['portfolio_kind'];
+          name: string;
+          opened_on: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['portfolio_kind'];
+          name: string;
+          opened_on?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['portfolio_kind'];
+          name?: string;
+          opened_on?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       price_history: {
         Row: {
@@ -249,18 +367,21 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string;
+          disabled_at: string | null;
           invited_by: string | null;
           is_admin: boolean;
           user_id: string;
         };
         Insert: {
           created_at?: string;
+          disabled_at?: string | null;
           invited_by?: string | null;
           is_admin?: boolean;
           user_id: string;
         };
         Update: {
           created_at?: string;
+          disabled_at?: string | null;
           invited_by?: string | null;
           is_admin?: boolean;
           user_id?: string;
@@ -301,30 +422,89 @@ export type Database = {
       };
       settings: {
         Row: {
+          benchmark_symbol: string | null;
           discord_webhook_url: string | null;
           email: string | null;
+          income_tax_rate: number;
+          last_report_on: string | null;
           last_summary_on: string | null;
+          ntfy_url: string | null;
+          report_frequency: string | null;
+          social_tax_rate: number;
           summary_enabled: boolean;
           summary_time: string;
+          telegram_chat_id: string | null;
           user_id: string;
         };
         Insert: {
+          benchmark_symbol?: string | null;
           discord_webhook_url?: string | null;
           email?: string | null;
+          income_tax_rate?: number;
+          last_report_on?: string | null;
           last_summary_on?: string | null;
+          ntfy_url?: string | null;
+          report_frequency?: string | null;
+          social_tax_rate?: number;
           summary_enabled?: boolean;
           summary_time?: string;
+          telegram_chat_id?: string | null;
           user_id?: string;
         };
         Update: {
+          benchmark_symbol?: string | null;
           discord_webhook_url?: string | null;
           email?: string | null;
+          income_tax_rate?: number;
+          last_report_on?: string | null;
           last_summary_on?: string | null;
+          ntfy_url?: string | null;
+          report_frequency?: string | null;
+          social_tax_rate?: number;
           summary_enabled?: boolean;
           summary_time?: string;
+          telegram_chat_id?: string | null;
           user_id?: string;
         };
         Relationships: [];
+      };
+      splits: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          effective_on: string;
+          id: string;
+          instrument_id: string;
+          ratio_from: number;
+          ratio_to: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          effective_on: string;
+          id?: string;
+          instrument_id: string;
+          ratio_from: number;
+          ratio_to: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          effective_on?: string;
+          id?: string;
+          instrument_id?: string;
+          ratio_from?: number;
+          ratio_to?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'splits_instrument_id_fkey';
+            columns: ['instrument_id'];
+            isOneToOne: false;
+            referencedRelation: 'instruments';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       user_instruments: {
         Row: {
@@ -354,19 +534,25 @@ export type Database = {
       };
       worker_status: {
         Row: {
+          failed: Json;
           id: number;
           last_cycle_at: string | null;
           last_error: string | null;
+          last_poll_at: string | null;
         };
         Insert: {
+          failed?: Json;
           id?: number;
           last_cycle_at?: string | null;
           last_error?: string | null;
+          last_poll_at?: string | null;
         };
         Update: {
+          failed?: Json;
           id?: number;
           last_cycle_at?: string | null;
           last_error?: string | null;
+          last_poll_at?: string | null;
         };
         Relationships: [];
       };
@@ -375,14 +561,64 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      assert_no_oversell: {
-        Args: { p_instrument: string; p_user: string };
+      aal_ok: { Args: never; Returns: boolean };
+      access_ok: { Args: never; Returns: boolean };
+      admin_change_symbol: {
+        Args: { p_instrument: string; p_name?: string; p_symbol: string };
         Returns: undefined;
       };
+      admin_list_accounts: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          disabled_at: string;
+          email: string;
+          has_mfa: boolean;
+          is_admin: boolean;
+          last_sign_in_at: string;
+          orders_count: number;
+          user_id: string;
+        }[];
+      };
+      admin_set_disabled: {
+        Args: { p_disabled: boolean; p_user: string };
+        Returns: undefined;
+      };
+      admin_supervision: {
+        Args: never;
+        Returns: {
+          fetched_at: string;
+          followers: number;
+          instrument_id: string;
+          last_close_date: string;
+          name: string;
+          price: number;
+          quoted_at: string;
+          yahoo_symbol: string;
+        }[];
+      };
+      assert_no_oversell: {
+        Args: { p_instrument: string; p_portfolio: string };
+        Returns: undefined;
+      };
+      delete_my_account: { Args: never; Returns: undefined };
       invitation_is_valid: { Args: { p_code: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };
+      set_instrument_isin: {
+        Args: { p_instrument: string; p_isin: string };
+        Returns: undefined;
+      };
+      split_factor: {
+        Args: { p_at: string; p_instrument: string };
+        Returns: number;
+      };
       track_instrument: {
-        Args: { p_exchange?: string; p_name?: string; p_symbol: string };
+        Args: {
+          p_exchange?: string;
+          p_name?: string;
+          p_symbol: string;
+          p_type?: string;
+        };
         Returns: string;
       };
     };
@@ -394,8 +630,15 @@ export type Database = {
         | 'day_change_up'
         | 'day_change_down'
         | 'position_pl_above'
-        | 'position_pl_below';
+        | 'position_pl_below'
+        | 'drawdown_from_high'
+        | 'portfolio_value_above'
+        | 'portfolio_value_below'
+        | 'portfolio_day_change_up'
+        | 'portfolio_day_change_down';
+      cash_kind: 'deposit' | 'withdrawal' | 'dividend' | 'fee';
       order_side: 'buy' | 'sell';
+      portfolio_kind: 'pea' | 'pea_pme' | 'cto';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -528,8 +771,15 @@ export const Constants = {
         'day_change_down',
         'position_pl_above',
         'position_pl_below',
+        'drawdown_from_high',
+        'portfolio_value_above',
+        'portfolio_value_below',
+        'portfolio_day_change_up',
+        'portfolio_day_change_down',
       ],
+      cash_kind: ['deposit', 'withdrawal', 'dividend', 'fee'],
       order_side: ['buy', 'sell'],
+      portfolio_kind: ['pea', 'pea_pme', 'cto'],
     },
   },
 } as const;

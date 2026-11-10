@@ -6,3 +6,8 @@ export * from './alerts';
 export * from './portfolio';
 export * from './describe';
 export * from './portfolio-view';
+export * from './cash';
+export * from './splits';
+export * from './tax';
+export * from './performance';
+export * from './isin';

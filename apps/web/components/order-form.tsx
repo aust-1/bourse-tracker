@@ -13,9 +13,18 @@ export interface OrderFormValues {
   fees: string;
   executedAt: string;
   note: string;
+  portfolioId: string;
 }
 
-export function OrderForm({ id, values }: { id: string | null; values: OrderFormValues }) {
+export function OrderForm({
+  id,
+  values,
+  portfolios,
+}: {
+  id: string | null;
+  values: OrderFormValues;
+  portfolios: { id: string; name: string }[];
+}) {
   const [state, action, pending] = useActionState<OrderFormState, FormData>(
     saveOrder.bind(null, id),
     {},
@@ -31,6 +40,27 @@ export function OrderForm({ id, values }: { id: string | null; values: OrderForm
           locked={id !== null}
         />
       </div>
+
+      {portfolios.length > 1 ? (
+        <label className="flex flex-col gap-1 text-sm">
+          Portefeuille
+          <select
+            // remonté après une erreur : un select ignore un nouveau defaultValue
+            key={v?.portfolioId ?? values.portfolioId}
+            name="portfolioId"
+            defaultValue={v?.portfolioId ?? values.portfolioId}
+            className="input"
+          >
+            {portfolios.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <input type="hidden" name="portfolioId" value={values.portfolioId} />
+      )}
 
       <fieldset className="flex gap-6 text-sm">
         <legend className="mb-1">Sens</legend>

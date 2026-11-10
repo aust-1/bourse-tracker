@@ -4,6 +4,8 @@ export interface TrackedInstrument {
   id: string;
   symbol: string;
   name: string;
+  /** null tant que la source ne l'a pas fourni */
+  assetType?: 'etf' | 'equity' | null;
 }
 
 export interface StoredQuote {
@@ -17,10 +19,17 @@ export interface StoredQuote {
 export interface AlertRow {
   id: string;
   userId: string;
-  instrumentId: string;
+  /** null : alerte sur le portefeuille entier */
+  instrumentId: string | null;
   type: AlertType;
   threshold: number;
   channels: string[];
+  note?: string | null;
+  /** Délai avant réarmement automatique (null : réarmement manuel) */
+  rearmMinutes?: number | null;
+  /** Plus haut observé (baisse depuis le plus haut) */
+  referenceValue?: number | null;
+  lastTriggeredAt?: string | null;
 }
 
 export interface UserSettings {
@@ -30,6 +39,11 @@ export interface UserSettings {
   summaryEnabled: boolean;
   summaryTime: string;
   lastSummaryOn: string | null;
+  /** Rapport périodique : hebdomadaire, mensuel ou aucun */
+  reportFrequency?: 'weekly' | 'monthly' | null;
+  lastReportOn?: string | null;
+  ntfyUrl?: string | null;
+  telegramChatId?: string | null;
 }
 
 /** Accès aux données du worker : implémenté par Supabase (prod) et en mémoire (tests). */
@@ -38,9 +52,12 @@ export interface Store {
   listTrackedInstruments(): Promise<TrackedInstrument[]>;
   getQuotes(instrumentIds: readonly string[]): Promise<Map<string, StoredQuote>>;
   upsertQuote(q: Omit<StoredQuote, 'fetchedAt'>): Promise<void>;
+  /** Type d'actif fourni par la source (renseigné une seule fois). */
+  setAssetType(instrumentId: string, type: 'etf' | 'equity'): Promise<void>;
   /** Dernière clôture journalière strictement avant `beforeDate` (YYYY-MM-DD). */
   getPrevCloseFallback(instrumentId: string, beforeDate: string): Promise<number | null>;
-  recordCycle(result: { error: string | null }): Promise<void>;
+  /** Fin de cycle ; `failed` (cycles de cotation seulement) remplace la liste des échecs. */
+  recordCycle(result: CycleRecord): Promise<void>;
 
   /** Plus ancienne et plus récente clôture stockées pour un instrument. */
   getHistoryBounds(instrumentId: string): Promise<{ min: string | null; max: string | null }>;
@@ -51,6 +68,12 @@ export interface Store {
   ): Promise<void>;
 
   listActiveAlerts(): Promise<AlertRow[]>;
+  /** Alertes déclenchées à réarmement automatique (délai défini). */
+  listRearmableAlerts(): Promise<AlertRow[]>;
+  /** Repasse une alerte en `active` (plus haut de référence remis à zéro). */
+  rearmAlert(alertId: string): Promise<void>;
+  /** Nouveau plus haut observé pour une alerte de baisse depuis le plus haut. */
+  updateAlertReference(alertId: string, value: number): Promise<void>;
   /** Ordres d'un utilisateur sur un instrument (pour calculer le PRU). */
   getOrders(userId: string, instrumentId: string): Promise<Order[]>;
   /** Passe l'alerte de `active` à `triggered` ; false si une autre exécution l'a déjà prise. */
@@ -72,6 +95,15 @@ export interface Store {
   listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]>;
   /** Consigne l'envoi du résumé du jour (`day` = YYYY-MM-DD, Paris). */
   markSummarySent(userId: string, day: string): Promise<void>;
+  /** Consigne l'envoi du rapport périodique (jour de la fin de période). */
+  markReportSent(userId: string, day: string): Promise<void>;
+  /** Clôtures des instruments depuis `fromDate` inclus (YYYY-MM-DD). */
+  getCloses(
+    instrumentIds: readonly string[],
+    fromDate: string,
+  ): Promise<{ instrumentId: string; date: string; close: number }[]>;
+  /** Revenus d'un compte : dividendes (+) et frais hors courtage (−), datés. */
+  listIncome(userId: string): Promise<{ date: string; amount: number }[]>;
 }
 
 export interface AlertEventRow {
@@ -80,4 +112,10 @@ export interface AlertEventRow {
   instrumentName: string;
   value: number;
   triggeredAt: Date;
+}
+
+export interface CycleRecord {
+  error: string | null;
+  /** Échecs de cotation du cycle ; absent hors cycle de cotation (rien n'est alors remplacé). */
+  failed?: { symbol: string; error: string }[];
 }

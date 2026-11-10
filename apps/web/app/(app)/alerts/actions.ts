@@ -1,12 +1,13 @@
 'use server';
 
-import { computePosition, evaluateAlert } from '@bourse/core';
+import { adjustForSplits, computePosition, evaluateAlert } from '@bourse/core';
 import { fetchAll } from '@bourse/db';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseAlertForm } from '@/lib/alerts';
 import { ensureInstrument } from '@/lib/instruments';
 import { dbErrorMessage } from '@/lib/orders';
+import { loadSplits } from '@/lib/queries';
 import { snapshot, type FormValues } from '@/lib/form-state';
 import { createClient } from '@/lib/supabase/server';
 
@@ -24,20 +25,31 @@ export async function createAlert(
   if (!data) return { error, values: snapshot(formData) };
 
   const supabase = await createClient();
+  const common = {
+    type: data.type,
+    threshold: data.threshold,
+    channels: data.channels,
+    note: data.note,
+    rearm_minutes: data.rearmMinutes,
+  };
+
+  // alerte sur le portefeuille entier : aucun titre, rien à vérifier de plus
+  if (data.symbol === null) {
+    const res = await supabase.from('alerts').insert({ ...common, instrument_id: null });
+    if (res.error) return { error: dbErrorMessage(res.error), values: snapshot(formData) };
+    revalidatePath('/alerts');
+    redirect('/alerts');
+  }
+
   const inst = await ensureInstrument(supabase, data.symbol);
   if (!inst.id) return { error: inst.error, values: snapshot(formData) };
   const instrumentId = inst.id; // capturé : le rétrécissement de type ne traverse pas les callbacks
 
-  const res = await supabase.from('alerts').insert({
-    instrument_id: inst.id,
-    type: data.type,
-    threshold: data.threshold,
-    channels: data.channels,
-  });
+  const res = await supabase.from('alerts').insert({ ...common, instrument_id: inst.id });
   if (res.error) return { error: dbErrorMessage(res.error), values: snapshot(formData) };
 
   // la condition est-elle déjà vraie ? Elle partirait alors au prochain cycle en séance.
-  const [quote, orders] = await Promise.all([
+  const [quote, orders, splits] = await Promise.all([
     supabase
       .from('quotes_latest')
       .select('price, prev_close')
@@ -51,20 +63,24 @@ export async function createAlert(
         .order('id')
         .range(from, to),
     ),
+    loadSplits(supabase),
   ]);
   let alreadyTrue = false;
   if (quote.data) {
     let avgCost: number | null;
     try {
       const pos = computePosition(
-        orders.map((o) => ({
-          id: o.id,
-          side: o.side,
-          quantity: o.quantity,
-          unitPrice: o.unit_price,
-          fees: o.fees,
-          executedAt: o.executed_at,
-        })),
+        adjustForSplits(
+          orders.map((o) => ({
+            id: o.id,
+            side: o.side,
+            quantity: o.quantity,
+            unitPrice: o.unit_price,
+            fees: o.fees,
+            executedAt: o.executed_at,
+          })),
+          splits.filter((s) => s.instrumentId === instrumentId),
+        ),
       );
       avgCost = pos.quantity > 0 ? pos.avgCost : null;
     } catch {

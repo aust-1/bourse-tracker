@@ -7,6 +7,8 @@ export interface InstrumentRow {
   id: string;
   symbol: string;
   name: string;
+  isin?: string | null;
+  assetType?: 'etf' | 'equity' | null;
 }
 
 export interface OrderRow extends Order {

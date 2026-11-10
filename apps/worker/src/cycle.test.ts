@@ -111,6 +111,18 @@ describe('Cycle', () => {
     expect(provider.getDailyCloses).toHaveBeenCalled();
   });
 
+  it('consigne les échecs de cotation (séance) mais pas hors cycle de cotation', async () => {
+    const { store, provider, cycle } = setup();
+    addInstrument(store);
+    provider.getQuote.mockRejectedValueOnce(new Error('HTTP 503'));
+    await cycle.run(fridayMorning);
+    expect(store.cycles.at(-1)?.failed).toEqual([
+      { symbol: expect.any(String), error: expect.stringContaining('503') },
+    ]);
+    await cycle.run(fridayEvening);
+    expect(store.cycles.at(-1)?.failed).toBeUndefined();
+  });
+
   it("un échec de récupération n'empêche pas les cycles suivants", async () => {
     const { store, provider, cycle } = setup();
     addInstrument(store);

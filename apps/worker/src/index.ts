@@ -1,6 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@bourse/db';
-import { Notifier, YahooProvider, type Message } from '@bourse/providers';
+import {
+  ALL_CHANNELS,
+  EodhdProvider,
+  FallbackProvider,
+  Notifier,
+  ntfyHosts,
+  YahooProvider,
+  type Message,
+  type PriceProvider,
+} from '@bourse/providers';
 import { loadConfig } from './config';
 import { Cycle } from './cycle';
 import { HistoryJob } from './history';
@@ -14,13 +23,23 @@ const db = createClient<Database>(config.supabaseUrl, config.serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 const store = new SupabaseStore(db);
-const provider = new YahooProvider();
-const notifier = new Notifier({ resendApiKey: config.resendApiKey, emailFrom: config.emailFrom });
+// Yahoo, et EODHD en secours des cotes si une clé est configurée
+const provider: PriceProvider = config.eodhdApiKey
+  ? new FallbackProvider(new YahooProvider(), new EodhdProvider({ apiKey: config.eodhdApiKey }), {
+      onSwitch: (to, reason) => log.warn('source de prix basculée', { to, reason }),
+    })
+  : new YahooProvider();
+const notifier = new Notifier({
+  resendApiKey: config.resendApiKey,
+  emailFrom: config.emailFrom,
+  telegramBotToken: config.telegramBotToken,
+  ntfyHosts: ntfyHosts(process.env.NTFY_HOSTS),
+});
 
 /** Message système (panne de la source de prix…) : envoyé aux administrateurs, sur tous leurs canaux. */
 async function notifyAll(message: Message) {
   for (const s of await store.listAdminSettings()) {
-    await notifier.notify(s, ['discord', 'email'], message);
+    await notifier.notify(s, ALL_CHANNELS, message);
   }
 }
 
