@@ -24,13 +24,9 @@ export async function GET(request: NextRequest) {
     ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
   }
 
-  const url = request.nextUrl.clone();
-  url.search = '';
-  if (ok) {
-    url.pathname = next;
-  } else {
-    url.pathname = '/login';
-    url.searchParams.set('error', 'link');
-  }
-  return NextResponse.redirect(url);
+  // Location relatif : dans un gestionnaire de route, request.nextUrl porte l'adresse d'écoute du
+  // conteneur (HOSTNAME=0.0.0.0, port 3000) et non le domaine public servi par Caddy. Le proxy
+  // n'a pas ce défaut : Next y relativise lui-même les redirections vers le même hôte.
+  const location = ok ? next : '/login?error=link';
+  return new NextResponse(null, { status: 303, headers: { Location: location } });
 }
