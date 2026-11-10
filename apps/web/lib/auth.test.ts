@@ -20,6 +20,10 @@ describe('safeNext', () => {
     '/\t/evil.example.com',
     '/\n/evil.example.com',
     '\t//evil.example.com',
+    // la normalisation du chemin peut produire « //evil.example.com »
+    '/.//evil.example.com',
+    '/a/..//evil.example.com',
+    '/./\\evil.example.com',
   ])('refuse %j', (v) => {
     expect(safeNext(v)).toBe('/');
   });

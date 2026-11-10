@@ -14,7 +14,10 @@ export function safeNext(next: string | null | undefined, fallback = '/'): strin
     return fallback;
   }
   if (url.origin !== base) return fallback;
-  return url.pathname + url.search + url.hash;
+  // la normalisation elle-même peut produire `//hôte` (`/.//evil.com`) : on vérifie la sortie
+  const path = url.pathname + url.search + url.hash;
+  if (path.startsWith('//') || path.startsWith('/\\')) return fallback;
+  return path;
 }
 
 /** Pages réservées aux visiteurs non connectés (un compte connecté est renvoyé à l'accueil). */
