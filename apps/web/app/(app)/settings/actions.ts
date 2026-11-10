@@ -1,11 +1,11 @@
 'use server';
 
-import { Notifier, ntfyHosts, type Channel } from '@bourse/providers';
-import { revalidatePath } from 'next/cache';
+import { snapshot, type FormValues } from '@/lib/form-state';
 import { dbErrorMessage } from '@/lib/orders';
 import { describeDelivery, parseSettingsForm } from '@/lib/settings';
-import { snapshot, type FormValues } from '@/lib/form-state';
 import { createClient } from '@/lib/supabase/server';
+import { Notifier, ntfyHosts, type Channel } from '@bourse/providers';
+import { revalidatePath } from 'next/cache';
 
 export interface SettingsState {
   error?: string;
@@ -53,7 +53,7 @@ export async function sendTest(channel: Channel): Promise<{ message: string }> {
 
   const notifier = new Notifier({
     resendApiKey: process.env.RESEND_API_KEY || null,
-    emailFrom: process.env.EMAIL_FROM || 'Bourse Tracker <onboarding@resend.dev>',
+    emailFrom: process.env.EMAIL_FROM || 'Bourse Tracker <onboarding@eliott-roussille.fr>',
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || null,
     ntfyHosts: ntfyHosts(process.env.NTFY_HOSTS),
   });
