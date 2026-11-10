@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   title: 'Bourse Tracker',
   applicationName: 'Bourse Tracker',
   icons: {
-    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    // favicon : .ico (16, 32, 48 px) pour les navigateurs qui le demandent d'office, SVG net à toute taille
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
     apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
   },
   // plein écran une fois ajoutée à l'écran d'accueil d'un iPhone

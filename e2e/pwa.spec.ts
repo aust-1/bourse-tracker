@@ -13,6 +13,20 @@ test('PWA : manifeste et icônes accessibles sans session', async ({ request }) 
   }
 });
 
+test('favicon : .ico et SVG servis sans session et déclarés dans la page', async ({ page, request }) => {
+  for (const [url, type] of [
+    ['/favicon.ico', 'image/x-icon'],
+    ['/icons/icon.svg', 'image/svg+xml'],
+  ]) {
+    const res = await request.get(url, { maxRedirects: 0 });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toBe(type);
+  }
+  await page.goto('/login');
+  await expect(page.locator('link[rel="icon"][href="/favicon.ico"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="icon"][href="/icons/icon.svg"]')).toHaveCount(1);
+});
+
 test('téléphone : tableau de bord sans défilement horizontal de la page', async ({ page }) => {
   const { userId, instrumentId } = await resetData();
   await admin.from('orders').insert({
