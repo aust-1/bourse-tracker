@@ -1,3 +1,4 @@
+import { parisDate } from '@bourse/core';
 import { z } from 'zod';
 
 export const portfolioSchema = z.object({
@@ -8,7 +9,7 @@ export const portfolioSchema = z.object({
     .trim()
     .refine((s) => s === '' || /^\d{4}-\d{2}-\d{2}$/.test(s), 'Date d’ouverture invalide')
     .refine(
-      (s) => s === '' || s <= new Date().toISOString().slice(0, 10),
+      (s) => s === '' || s <= parisDate(new Date()),
       'La date d’ouverture ne peut pas être dans le futur',
     )
     .transform((s) => (s === '' ? null : s)),

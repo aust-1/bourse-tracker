@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseCashForm } from './cash';
 
 const PF = '50000000-0000-0000-0000-000000000001';
@@ -42,5 +42,26 @@ describe('parseCashForm', () => {
     [{ portfolioId: '' }, 'portefeuille'],
   ])('refuse %o', (patch, message) => {
     expect(parseCashForm(form({ ...base, ...patch })).error).toContain(message);
+  });
+
+  describe('date du jour à Paris', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each([
+      ['heure d’hiver', '2026-01-15T00:30:00+01:00', '2026-01-15'],
+      ['heure d’été', '2026-07-15T00:30:00+02:00', '2026-07-15'],
+    ])('accepte la date de Paris à 00:30 (%s)', (_label, now, day) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(now));
+      expect(parseCashForm(form({ ...base, occurredOn: day })).data?.occurredOn).toBe(day);
+    });
+
+    it('refuse le lendemain à Paris pendant que l’UTC est encore la veille', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-15T00:30:00+01:00'));
+      expect(parseCashForm(form({ ...base, occurredOn: '2026-01-16' })).error).toContain('futur');
+    });
   });
 });
