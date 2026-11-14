@@ -1,4 +1,4 @@
-import type { CashKind, CashMovement } from '@bourse/core';
+import { parisDate, type CashKind, type CashMovement } from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
@@ -53,10 +53,7 @@ export const cashSchema = z
     occurredOn: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date invalide')
-      .refine(
-        (s) => s <= new Date().toISOString().slice(0, 10),
-        'La date ne peut pas être dans le futur',
-      ),
+      .refine((s) => s <= parisDate(new Date()), 'La date ne peut pas être dans le futur'),
     note: z
       .string()
       .trim()
