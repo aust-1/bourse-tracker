@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PassThrough } from '@/lib/page-title';
+import { pageTitle, PassThrough } from '@/lib/page-title';
 import { createClient } from '@/lib/supabase/server';
 
 /** Onglet au nom du titre (lecture filtrée par la RLS : seulement les titres suivis). */
@@ -11,7 +11,7 @@ export async function generateMetadata({
   const { id } = await params;
   const supabase = await createClient();
   const { data } = await supabase.from('instruments').select('name').eq('id', id).maybeSingle();
-  return { title: data?.name ?? 'Titre' };
+  return pageTitle(data?.name ?? 'Titre');
 }
 
 export default PassThrough;
