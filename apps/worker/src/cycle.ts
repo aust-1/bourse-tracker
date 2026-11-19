@@ -1,9 +1,9 @@
 import { isMarketOpen, isPollingWindow, isWorkWindow } from '@bourse/core';
 import type { Message, Notifier, PriceProvider } from '@bourse/providers';
 import { evaluateAlerts } from './alerts';
-import { sendEmailVerificationCodes } from './email-verification';
 import type { HistoryJob } from './history';
 import type { Logger } from './log';
+import { sendEmailVerificationCodes } from './email-verification';
 import type { SourceMonitor } from './monitor';
 import { pollCycle, type CycleResult, type FreshQuote } from './poll';
 import type { Store } from './store';
