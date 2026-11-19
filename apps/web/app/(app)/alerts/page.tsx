@@ -3,7 +3,7 @@ import { CHANNEL_NAMES } from '@/lib/settings';
 import Link from 'next/link';
 import { dateTime, eur, pct } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
-import { deleteAlert, setAlertStatus } from './actions';
+import { deleteAlert, rearmAlert, setAlertStatus } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,7 +124,7 @@ export default async function AlertsPage({
                   <td className="td">
                     <div className="flex justify-end gap-3 text-sm">
                       {a.status === 'triggered' && (
-                        <form action={setAlertStatus.bind(null, a.id, 'active')}>
+                        <form action={rearmAlert.bind(null, a.id)}>
                           <button className="underline">Ré-armer</button>
                         </form>
                       )}

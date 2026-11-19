@@ -102,6 +102,21 @@ export async function setAlertStatus(id: string, status: 'active' | 'paused') {
   revalidatePath('/alerts');
 }
 
+/**
+ * Ré-arme une alerte déclenchée, comme le réarmement automatique du worker : une baisse depuis le
+ * plus haut repart du cours actuel (plus haut de référence remis à zéro), sinon l'ancien plus haut
+ * la redéclencherait au cycle suivant.
+ */
+export async function rearmAlert(id: string) {
+  const supabase = await createClient();
+  await supabase
+    .from('alerts')
+    .update({ status: 'active', reference_value: null })
+    .eq('id', id)
+    .eq('status', 'triggered');
+  revalidatePath('/alerts');
+}
+
 export async function deleteAlert(id: string) {
   const supabase = await createClient();
   await supabase.from('alerts').delete().eq('id', id);
