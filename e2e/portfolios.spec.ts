@@ -96,3 +96,35 @@ test('ancienneté et fiscalité du PEA : 5 ans, impôt estimé', async ({ page }
   // valeur 1 500 € (10 × 150, liquidités 0) − versements 1 000 € = 500 € × 17,2 % = 86 €
   await expect(page.getByTestId('pea-tax')).toHaveText(/86,00/);
 });
+
+test('un portefeuille avec des mouvements d’espèces ne peut pas être supprimé', async ({
+  page,
+}) => {
+  const { userId } = await resetData();
+  const pme = await admin
+    .from('portfolios')
+    .insert({ user_id: userId, name: 'PEA-PME', kind: 'pea_pme' })
+    .select('id')
+    .single();
+  await admin.from('portfolios').insert({ user_id: userId, name: 'Vide', kind: 'cto' });
+  await admin.from('cash_movements').insert({
+    user_id: userId,
+    portfolio_id: pme.data!.id,
+    kind: 'deposit',
+    amount: 1000,
+    occurred_on: '2026-01-02',
+  });
+  await login(page);
+  await page.goto('/portfolios');
+
+  // versement sans ordre : pas de bouton, le nombre de mouvements est affiché
+  const pmeRow = page.getByRole('row', { name: /PEA-PME/ });
+  await expect(pmeRow.getByRole('button', { name: 'Supprimer' })).toHaveCount(0);
+  await expect(pmeRow.getByRole('cell').nth(4)).toHaveText('1');
+
+  // portefeuille vide : supprimable
+  await page.getByRole('row', { name: /Vide/ }).getByRole('button', { name: 'Supprimer' }).click();
+  await expect(page.getByRole('row', { name: /Vide/ })).toHaveCount(0);
+  const left = await admin.from('cash_movements').select('id').eq('portfolio_id', pme.data!.id);
+  expect(left.data).toHaveLength(1);
+});

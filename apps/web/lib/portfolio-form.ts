@@ -25,3 +25,16 @@ export function parsePortfolioForm(formData: FormData): { data?: PortfolioInput;
   if (parsed.success) return { data: parsed.data };
   return { error: parsed.error.issues[0]?.message ?? 'Saisie invalide' };
 }
+
+/**
+ * Un portefeuille n'est supprimable que s'il est vide : ni ordre, ni mouvement d'espèces (la base
+ * supprimerait les mouvements avec lui, et les versements comptent dans le plafond du PEA), et
+ * jamais le dernier du compte. Un nombre inconnu (lecture en échec) vaut refus.
+ */
+export function canDeletePortfolio(c: {
+  orders: number | null;
+  movements: number | null;
+  portfolios: number;
+}): boolean {
+  return c.orders === 0 && c.movements === 0 && c.portfolios > 1;
+}
