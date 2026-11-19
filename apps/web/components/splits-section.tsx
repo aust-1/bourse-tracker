@@ -1,4 +1,5 @@
 import { addSplit, deleteSplit } from '@/app/(app)/instruments/[id]/actions';
+import { ConfirmButton } from './confirm-button';
 
 interface SplitRow {
   id: string;
@@ -34,7 +35,12 @@ export function SplitsSection({
               </span>
               {isAdmin && (
                 <form action={deleteSplit.bind(null, instrumentId, s.id)}>
-                  <button className="text-sm text-red-600 underline">Supprimer</button>
+                  <ConfirmButton
+                    className="text-sm text-red-600 underline"
+                    message={`Supprimer la division du ${frDate(s.effective_on)} ? Les ordres antérieurs de tous les comptes qui suivent ce titre seront recalculés.`}
+                  >
+                    Supprimer
+                  </ConfirmButton>
                 </form>
               )}
             </li>
