@@ -46,6 +46,44 @@ describe('pollCycle', () => {
     expect(store.assetTypes.has('i2')).toBe(false);
   });
 
+  it('première cotation : nom et place recalés sur la source', async () => {
+    const store = setup();
+    store.tracked[0] = { ...store.tracked[0]!, name: 'Nom choisi par un compte' };
+    const provider = {
+      getQuote: async (s: string) =>
+        quote(s, { name: s === 'CW8.PA' ? 'Amundi MSCI World Swap' : 'LVMH', exchange: 'PAR' }),
+    };
+    const r = await pollCycle({ store, provider, log: silentLogger });
+    expect(store.sources.get('i1')).toEqual({ name: 'Amundi MSCI World Swap', exchange: 'PAR' });
+    // le nom de la source sert aussi aux alertes du cycle
+    expect(r.quotes.find((q) => q.instrument.id === 'i1')!.instrument.name).toBe(
+      'Amundi MSCI World Swap',
+    );
+    // nom déjà identique : rien à écrire
+    expect(store.sources.has('i2')).toBe(false);
+  });
+
+  it('cote déjà connue : le nom n’est plus modifié', async () => {
+    const store = setup();
+    store.quotes.set('i1', {
+      instrumentId: 'i1',
+      price: 100,
+      prevClose: 99,
+      quotedAt: new Date('2026-09-24T15:30:00Z'),
+      fetchedAt: new Date('2026-09-24T15:31:00Z'),
+    });
+    const provider = { getQuote: async (s: string) => quote(s, { name: 'Autre nom' }) };
+    await pollCycle({ store, provider, log: silentLogger });
+    expect(store.sources.has('i1')).toBe(false);
+  });
+
+  it('source sans nom (secours) : le nom existant est gardé', async () => {
+    const store = setup();
+    const provider = { getQuote: async (s: string) => quote(s, { name: null }) };
+    await pollCycle({ store, provider, log: silentLogger });
+    expect(store.sources.size).toBe(0);
+  });
+
   it("n'écrit rien quand la cote n'a pas changé", async () => {
     const store = setup();
     const provider = { getQuote: async (s: string) => quote(s) };

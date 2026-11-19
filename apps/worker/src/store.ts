@@ -54,6 +54,14 @@ export interface Store {
   upsertQuote(q: Omit<StoredQuote, 'fetchedAt'>): Promise<void>;
   /** Type d'actif fourni par la source (renseigné une seule fois). */
   setAssetType(instrumentId: string, type: 'etf' | 'equity'): Promise<void>;
+  /**
+   * Nom et place donnés par la source de prix, à la première cotation : un instrument est créé
+   * avec le nom transmis par le premier compte qui le suit, que rien ne garantit.
+   */
+  setInstrumentSource(
+    instrumentId: string,
+    source: { name: string; exchange: string | null },
+  ): Promise<void>;
   /** Dernière clôture journalière strictement avant `beforeDate` (YYYY-MM-DD). */
   getPrevCloseFallback(instrumentId: string, beforeDate: string): Promise<number | null>;
   /** Fin de cycle ; `failed` (cycles de cotation seulement) remplace la liste des échecs. */

@@ -79,6 +79,17 @@ export class SupabaseStore implements Store {
     if (error) throw new Error(`type d'actif : ${error.message}`);
   }
 
+  async setInstrumentSource(
+    instrumentId: string,
+    source: { name: string; exchange: string | null },
+  ): Promise<void> {
+    const { error } = await this.db
+      .from('instruments')
+      .update({ name: source.name, ...(source.exchange ? { exchange: source.exchange } : {}) })
+      .eq('id', instrumentId);
+    if (error) throw new Error(`nom de l'instrument : ${error.message}`);
+  }
+
   async getQuotes(ids: readonly string[]): Promise<Map<string, StoredQuote>> {
     if (ids.length === 0) return new Map();
     const rows = must(

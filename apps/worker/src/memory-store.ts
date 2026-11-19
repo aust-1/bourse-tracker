@@ -36,6 +36,14 @@ export class MemoryStore implements Store {
     if (!this.assetTypes.has(instrumentId)) this.assetTypes.set(instrumentId, type);
   }
 
+  sources = new Map<string, { name: string; exchange: string | null }>();
+
+  async setInstrumentSource(id: string, source: { name: string; exchange: string | null }) {
+    this.sources.set(id, source);
+    const t = this.tracked.find((x) => x.id === id);
+    if (t) t.name = source.name;
+  }
+
   async getPrevCloseFallback(instrumentId: string, beforeDate: string) {
     const rows = (this.closes.get(instrumentId) ?? []).filter((c) => c.date < beforeDate);
     return rows.length ? rows[rows.length - 1]!.close : null;
