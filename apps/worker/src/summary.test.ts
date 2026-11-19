@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Delivery, Message } from '@bourse/providers';
 import { silentLogger } from './log';
 import { MemoryStore } from './memory-store';
-import { sendDailySummaries, summaryMessage, timeToMinutes } from './summary';
+import { lineSections, sendDailySummaries, summaryMessage, timeToMinutes } from './summary';
 
 const norm = (s: string) => s.replace(/\s+/g, ' ');
 const day = '2026-09-25';
@@ -200,5 +200,43 @@ describe('summaryMessage', () => {
       },
     };
     expect(summaryMessage(day, view, []).body).toContain('2 ligne(s) sans cotation');
+  });
+});
+
+describe('lineSections', () => {
+  it('une section par ligne, avec cours, valeur, latent et gain du jour', async () => {
+    const store = setup();
+    const notifier = notifierReturning({ discord: 'sent' });
+    await sendDailySummaries({ store, notifier, log: silentLogger, now: after });
+    const message = notifier.notify.mock.calls[0]![2];
+    expect(message.sections!.map((x) => x.title)).toEqual(['World (CW8.PA)', 'LVMH (MC.PA)']);
+    const world = norm(message.sections![0]!.body);
+    expect(world).toContain('10 titres · PRU 100,00 €');
+    expect(world).toContain('Cours 110,00 € (+1,85 %)');
+    expect(world).toContain('Valeur 1 100,00 € · latent +100,00 € (+10,00 %)');
+    expect(world).toContain('Jour +20,00 €');
+    expect(message.sections![0]!.level).toBe('success');
+    expect(message.sections![1]!.level).toBe('warning');
+  });
+
+  it('ligne sans cote', () => {
+    const [s] = lineSections([
+      {
+        instrumentId: 'a',
+        symbol: 'CW8.PA',
+        name: 'World',
+        quantity: 1,
+        avgCost: 100,
+        costBasis: 100,
+        quote: null,
+        marketValue: null,
+        unrealizedPl: null,
+        unrealizedPlPct: null,
+        dayChangePct: null,
+        dayPl: null,
+      },
+    ]);
+    expect(s!.body).toContain('Pas de cotation');
+    expect(s!.level).toBe('info');
   });
 });

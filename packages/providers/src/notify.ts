@@ -3,6 +3,63 @@ export interface Message {
   title: string;
   body: string;
   level?: 'info' | 'warning' | 'success';
+  /**
+   * Détail par titre (résumé quotidien…) : un embed Discord chacun, sous l'embed principal.
+   * Les autres canaux s'en tiennent au corps du message.
+   */
+  sections?: MessageSection[];
+}
+
+export interface MessageSection {
+  title: string;
+  body: string;
+  level?: Message['level'];
+}
+
+/** Limites de Discord : 10 embeds par message, 6 000 caractères en tout. */
+const DISCORD_MAX_EMBEDS = 10;
+const DISCORD_MAX_CHARS = 5_800;
+
+interface DiscordEmbed {
+  title: string;
+  description: string;
+  color: number;
+  timestamp?: string;
+}
+
+/** Embeds Discord d'un message : le principal, puis un par section, dans les limites de Discord. */
+export function discordEmbeds(msg: Message, now = new Date()): DiscordEmbed[] {
+  const main: DiscordEmbed = {
+    title: msg.title.slice(0, 256),
+    description: msg.body.slice(0, 4000),
+    color: COLORS[msg.level ?? 'info'],
+    timestamp: now.toISOString(),
+  };
+  const embeds = [main];
+  let used = main.title.length + main.description.length;
+  const sections = msg.sections ?? [];
+  for (const [i, s] of sections.entries()) {
+    const embed = {
+      title: s.title.slice(0, 256),
+      description: s.body.slice(0, 1000),
+      color: COLORS[s.level ?? 'info'],
+    };
+    const size = embed.title.length + embed.description.length;
+    const left = sections.length - i;
+    // dernière place (ou plus de place) : un embed qui annonce les lignes restantes
+    if (embeds.length === DISCORD_MAX_EMBEDS - 1 && left > 1) {
+      embeds.push({
+        title: `+ ${left} autre${left > 1 ? 's' : ''} ligne${left > 1 ? 's' : ''}`,
+        description: 'Détail complet sur le site.',
+        color: COLORS.info,
+      });
+      break;
+    }
+    if (used + size > DISCORD_MAX_CHARS) break;
+    embeds.push(embed);
+    used += size;
+  }
+  return embeds;
 }
 
 export interface NotifyTarget {
@@ -102,16 +159,7 @@ export class Notifier {
     const res = await this.fetchImpl(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        embeds: [
-          {
-            title: msg.title.slice(0, 256),
-            description: msg.body.slice(0, 4000),
-            color: COLORS[msg.level ?? 'info'],
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      }),
+      body: JSON.stringify({ embeds: discordEmbeds(msg) }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`Discord HTTP ${res.status}`);
