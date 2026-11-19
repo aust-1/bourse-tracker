@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { allFailed, isDiscordWebhook, isNtfyUrl, Notifier, ntfyHosts } from '../src';
+import {
+  allFailed,
+  allFailedPermanently,
+  isDiscordWebhook,
+  isNtfyUrl,
+  isPermanentError,
+  Notifier,
+  ntfyHosts,
+} from '../src';
 
 const ok = () => new Response(null, { status: 204 });
 const settings = {
@@ -182,5 +190,40 @@ describe('ntfy : serveurs autorisés', () => {
       msg,
     );
     expect(fetch.mock.calls[0]![1]!.redirect).toBe('manual');
+  });
+});
+
+describe('erreurs définitives ou passagères', () => {
+  it.each([
+    ['error: Discord HTTP 404', true],
+    ['error: Resend HTTP 422', true],
+    ['error: ntfy HTTP 403', true],
+    ['error: Telegram HTTP 400', true],
+    ['error: URL de webhook Discord invalide', true],
+    ['error: clé Resend absente', true],
+    ['error: URL ntfy invalide ou serveur non autorisé', true],
+    ['error: Discord HTTP 429', false],
+    ['error: Discord HTTP 408', false],
+    ['error: Resend HTTP 500', false],
+    ['error: The operation was aborted due to timeout', false],
+    ['error: fetch failed', false],
+    ['sent', false],
+  ] as const)('%s → définitive : %s', (status, permanent) => {
+    expect(isPermanentError(status)).toBe(permanent);
+  });
+
+  it('tous les canaux en échec définitif', () => {
+    expect(allFailedPermanently({ discord: 'error: Discord HTTP 404' })).toBe(true);
+    expect(
+      allFailedPermanently({ discord: 'error: Discord HTTP 404', email: 'not_configured' }),
+    ).toBe(true);
+  });
+  it('un canal en panne passagère : on réessaiera', () => {
+    expect(
+      allFailedPermanently({ discord: 'error: Discord HTTP 404', email: 'error: Resend HTTP 503' }),
+    ).toBe(false);
+  });
+  it('un canal envoyé : pas un échec', () => {
+    expect(allFailedPermanently({ discord: 'error: Discord HTTP 404', email: 'sent' })).toBe(false);
   });
 });
