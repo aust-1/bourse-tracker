@@ -1,6 +1,7 @@
 import { isMarketOpen, isPollingWindow, isWorkWindow } from '@bourse/core';
 import type { Message, Notifier, PriceProvider } from '@bourse/providers';
 import { evaluateAlerts } from './alerts';
+import { sendEmailVerificationCodes } from './email-verification';
 import type { HistoryJob } from './history';
 import type { Logger } from './log';
 import type { SourceMonitor } from './monitor';
@@ -41,6 +42,10 @@ export class Cycle {
 
   async run(now: Date = new Date()): Promise<{ ran: boolean }> {
     const { store, provider, notifier, monitor, history, log, notifyAll } = this.d;
+    // codes de confirmation d'adresse : à toute heure, sans attendre la séance
+    await sendEmailVerificationCodes({ store, notifier, log, now }).catch(
+      guarded(log, 'codes de confirmation'),
+    );
     const polling = this.first || isPollingWindow(now);
     const working = isWorkWindow(now);
 

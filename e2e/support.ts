@@ -16,6 +16,11 @@ export async function resetData() {
     const { error } = await admin.from(t).delete().not(col, 'is', null);
     if (error) throw error;
   }
+  // confirmation d'adresse et limite des messages de test : repartent de zéro
+  for (const t of ['notification_email_verifications', 'notification_test_sends'] as const) {
+    const { error } = await admin.from(t).delete().not('user_id', 'is', null);
+    if (error) throw error;
+  }
   await admin.from('quotes_latest').delete().not('instrument_id', 'is', null);
   await admin.from('price_history').delete().not('instrument_id', 'is', null);
   await admin.from('instruments').delete().not('id', 'is', null);

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AccountData } from '@/components/account-data';
+import { EmailVerification } from '@/components/email-verification';
 import { MfaSettings } from '@/components/mfa-settings';
 import { SettingsForm } from '@/components/settings-form';
 import { DEFAULT_INCOME_RATE, DEFAULT_SOCIAL_RATE } from '@/lib/settings';
@@ -9,7 +10,19 @@ export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from('settings').select('*').maybeSingle();
+  const [{ data }, { data: verification }] = await Promise.all([
+    supabase.from('settings').select('*').maybeSingle(),
+    supabase
+      .from('notification_email_verifications')
+      .select('email, requested_at, code_expires_at')
+      .maybeSingle(),
+  ]);
+  const codeSent =
+    verification !== null &&
+    verification.email === data?.email &&
+    (verification.requested_at !== null ||
+      (verification.code_expires_at !== null &&
+        new Date(verification.code_expires_at) > new Date()));
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,6 +48,14 @@ export default async function SettingsPage() {
           telegramChatId: data?.telegram_chat_id ?? '',
         }}
       />
+      {data?.email && (
+        <EmailVerification
+          key={data.email}
+          email={data.email}
+          verified={data.email_verified}
+          codeSent={codeSent}
+        />
+      )}
       <MfaSettings />
       <AccountData />
     </div>

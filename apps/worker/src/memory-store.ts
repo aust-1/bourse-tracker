@@ -128,6 +128,26 @@ export class MemoryStore implements Store {
 
   admins = new Set<string>();
 
+  verificationRequests: { userId: string; email: string }[] = [];
+  verificationCodes = new Map<string, { email: string; codeHash: string; expiresAt: Date }>();
+
+  async listEmailVerificationRequests() {
+    return this.verificationRequests;
+  }
+
+  async saveEmailVerificationCode(
+    userId: string,
+    email: string,
+    codeHash: string,
+    expiresAt: Date,
+  ) {
+    const i = this.verificationRequests.findIndex((r) => r.userId === userId && r.email === email);
+    if (i < 0) return false;
+    this.verificationRequests.splice(i, 1);
+    this.verificationCodes.set(userId, { email, codeHash, expiresAt });
+    return true;
+  }
+
   async listAdminSettings() {
     return this.settings.filter((s) => this.admins.has(s.userId));
   }
