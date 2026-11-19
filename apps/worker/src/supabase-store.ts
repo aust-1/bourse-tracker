@@ -2,7 +2,7 @@ import {
   adjustForSplits,
   adjustOrdersBySplits,
   parisDate,
-  type Order,
+  type PortfolioOrder,
   type Split,
 } from '@bourse/core';
 import { fetchAll, type Database } from '@bourse/db';
@@ -242,11 +242,11 @@ export class SupabaseStore implements Store {
     if (error) throw new Error(`plus haut de l'alerte : ${error.message}`);
   }
 
-  async getOrders(userId: string, instrumentId: string): Promise<Order[]> {
+  async getOrders(userId: string, instrumentId: string): Promise<PortfolioOrder[]> {
     const rows = await fetchAll((from, to) =>
       this.db
         .from('orders')
-        .select('id, side, quantity, unit_price, fees, executed_at')
+        .select('id, portfolio_id, side, quantity, unit_price, fees, executed_at')
         .eq('user_id', userId)
         .eq('instrument_id', instrumentId)
         .order('id')
@@ -255,6 +255,7 @@ export class SupabaseStore implements Store {
     return adjustForSplits(
       rows.map((o) => ({
         id: o.id,
+        portfolioId: o.portfolio_id,
         side: o.side,
         quantity: o.quantity,
         unitPrice: o.unit_price,
@@ -366,7 +367,7 @@ export class SupabaseStore implements Store {
     const rows = await fetchAll((from, to) =>
       this.db
         .from('orders')
-        .select('id, instrument_id, side, quantity, unit_price, fees, executed_at')
+        .select('id, instrument_id, portfolio_id, side, quantity, unit_price, fees, executed_at')
         .eq('user_id', userId)
         .order('id')
         .range(from, to),
@@ -375,6 +376,7 @@ export class SupabaseStore implements Store {
       rows.map((o) => ({
         id: o.id,
         instrumentId: o.instrument_id,
+        portfolioId: o.portfolio_id,
         side: o.side,
         quantity: o.quantity,
         unitPrice: o.unit_price,

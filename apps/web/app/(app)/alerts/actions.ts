@@ -1,6 +1,6 @@
 'use server';
 
-import { adjustForSplits, computePosition, evaluateAlert } from '@bourse/core';
+import { adjustForSplits, computePositionByPortfolio, evaluateAlert } from '@bourse/core';
 import { fetchAll } from '@bourse/db';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -58,7 +58,7 @@ export async function createAlert(
     fetchAll((from, to) =>
       supabase
         .from('orders')
-        .select('id, side, quantity, unit_price, fees, executed_at')
+        .select('id, portfolio_id, side, quantity, unit_price, fees, executed_at')
         .eq('instrument_id', instrumentId)
         .order('id')
         .range(from, to),
@@ -69,10 +69,11 @@ export async function createAlert(
   if (quote.data) {
     let avgCost: number | null;
     try {
-      const pos = computePosition(
+      const pos = computePositionByPortfolio(
         adjustForSplits(
           orders.map((o) => ({
             id: o.id,
+            portfolioId: o.portfolio_id,
             side: o.side,
             quantity: o.quantity,
             unitPrice: o.unit_price,

@@ -1,6 +1,6 @@
 'use client';
 
-import { avgCostSeries, type Order } from '@bourse/core';
+import { avgCostSeries, type PortfolioOrder } from '@bourse/core';
 import { useEffect, useMemo, useState } from 'react';
 import { LineChart, type ChartPoint } from './line-chart';
 
@@ -18,7 +18,7 @@ export function InstrumentChart({
   instrumentId: string;
   name: string;
   /** Ordres de l'utilisateur sur ce titre : courbe du PRU au fil du temps */
-  orders: readonly Order[];
+  orders: readonly PortfolioOrder[];
 }) {
   const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[0]);
   const [points, setPoints] = useState<ChartPoint[] | null>(null);

@@ -1,5 +1,5 @@
 import { isMarketOpen, parisDate } from './market';
-import { computePosition } from './positions';
+import { byPortfolio, combinePositions, computePosition } from './positions';
 import type { Order } from './types';
 import { dayPl, valuePosition } from './valuation';
 
@@ -13,6 +13,8 @@ export interface InstrumentRow {
 
 export interface OrderRow extends Order {
   instrumentId: string;
+  /** Portefeuille de l'ordre : un même titre est rejoué enveloppe par enveloppe */
+  portfolioId?: string | null;
 }
 
 export interface QuoteRow {
@@ -74,7 +76,9 @@ export function buildPortfolioView(
   for (const inst of instruments) {
     const own = orders.filter((o) => o.instrumentId === inst.id);
     if (own.length === 0) continue;
-    const pos = computePosition(own);
+    // une position par portefeuille, additionnées : la ligne affichée agrège les enveloppes
+    const groups = byPortfolio(own);
+    const pos = combinePositions(groups.map(computePosition));
     realizedPl += pos.realizedPl;
     if (pos.quantity === 0) continue;
 
@@ -101,9 +105,13 @@ export function buildPortfolioView(
     }
 
     const v = valuePosition(pos, quote.price, quote.prevClose);
+    const prevClose = quote.prevClose;
     const day =
-      quote.prevClose !== null
-        ? dayPl(own, parisDate(quote.quotedAt), quote.price, quote.prevClose)
+      prevClose !== null
+        ? groups.reduce(
+            (sum, g) => sum + dayPl(g, parisDate(quote.quotedAt), quote.price, prevClose),
+            0,
+          )
         : null;
     totalValue += v.marketValue;
     totalCost += pos.costBasis;

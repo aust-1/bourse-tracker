@@ -91,6 +91,50 @@ describe('buildPortfolioView', () => {
   });
 });
 
+describe('buildPortfolioView : un titre dans plusieurs portefeuilles', () => {
+  // cas de l'issue : 10 X à 100 € sur le PEA ; sur le CTO, 10 X achetés puis vendus à 200 €
+  const orders: OrderRow[] = [
+    { ...o('1', 'a', 'buy', 10, 100, '2026-09-01T10:00:00Z'), portfolioId: 'pea' },
+    { ...o('2', 'a', 'buy', 10, 200, '2026-09-02T10:00:00Z'), portfolioId: 'cto' },
+    { ...o('3', 'a', 'sell', 10, 200, '2026-09-03T10:00:00Z'), portfolioId: 'cto' },
+  ];
+  const quotes = new Map([['a', q('a', 200, 200)]]);
+
+  it('chaque enveloppe est rejouée à part, puis les positions additionnées', () => {
+    const { rows, totals } = buildPortfolioView(orders, inst, quotes);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ quantity: 10, avgCost: 100, costBasis: 1000 });
+    expect(totals.unrealizedPl).toBeCloseTo(1000);
+    expect(totals.realizedPl).toBeCloseTo(0);
+    expect(totals.marketValue).toBeCloseTo(2000);
+  });
+
+  it('même titre ouvert dans deux enveloppes : PRU pondéré des deux positions', () => {
+    const two: OrderRow[] = [
+      { ...o('1', 'a', 'buy', 10, 100, '2026-09-01T10:00:00Z'), portfolioId: 'pea' },
+      { ...o('2', 'a', 'buy', 10, 200, '2026-09-02T10:00:00Z'), portfolioId: 'cto' },
+      { ...o('3', 'a', 'sell', 5, 200, '2026-09-03T10:00:00Z'), portfolioId: 'cto' },
+    ];
+    const { rows, totals } = buildPortfolioView(two, inst, quotes);
+    // PEA 10 à 100 ; CTO 5 à 200 (vente au PRU du CTO : réalisé nul)
+    expect(rows[0]).toMatchObject({ quantity: 15, costBasis: 2000 });
+    expect(rows[0]!.avgCost).toBeCloseTo(2000 / 15);
+    expect(totals.realizedPl).toBeCloseTo(0);
+  });
+
+  it('gain du jour : somme des enveloppes', () => {
+    const today: OrderRow[] = [
+      { ...o('1', 'a', 'buy', 10, 100, '2026-09-01T10:00:00Z'), portfolioId: 'pea' },
+      { ...o('2', 'a', 'buy', 5, 100, '2026-09-01T10:00:00Z'), portfolioId: 'cto' },
+      // vente du jour sur le CTO, à 198
+      { ...o('3', 'a', 'sell', 5, 198, '2026-09-25T09:00:00Z'), portfolioId: 'cto' },
+    ];
+    const { totals } = buildPortfolioView(today, inst, new Map([['a', q('a', 200, 195)]]));
+    // PEA : 10 × (200 − 195) = 50 ; CTO : 5 × (198 − 195) = 15
+    expect(totals.dayPl).toBeCloseTo(65);
+  });
+});
+
 describe('quoteFreshness', () => {
   const quotedAt = '2026-09-25T10:00:00Z';
   it('en direct en séance', () => {

@@ -46,3 +46,41 @@ export function applyOrder(pos: Position, o: Order): Position {
 export function computePosition(orders: readonly Order[]): Position {
   return sortOrders(orders).reduce(applyOrder, EMPTY_POSITION);
 }
+
+/** Ordre rattaché à un portefeuille (absent : un seul portefeuille). */
+export type PortfolioOrder = Order & { portfolioId?: string | null };
+
+/** Ordres regroupés par portefeuille : chaque enveloppe est rejouée séparément. */
+export function byPortfolio<T extends PortfolioOrder>(orders: readonly T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const o of orders) {
+    const key = o.portfolioId ?? '';
+    const list = groups.get(key);
+    if (list) list.push(o);
+    else groups.set(key, [o]);
+  }
+  return [...groups.values()];
+}
+
+/** Somme de positions d'un même titre (une par portefeuille) : PRU = coût total / quantité. */
+export function combinePositions(positions: readonly Position[]): Position {
+  let quantity = 0;
+  let costBasis = 0;
+  let realizedPl = 0;
+  for (const p of positions) {
+    quantity += p.quantity;
+    costBasis += p.costBasis;
+    realizedPl += p.realizedPl;
+  }
+  if (quantity < EPSILON) return { ...EMPTY_POSITION, realizedPl };
+  return { quantity, avgCost: costBasis / quantity, costBasis, realizedPl };
+}
+
+/**
+ * Position d'un titre détenu dans un ou plusieurs portefeuilles : chaque enveloppe est rejouée
+ * à part (le prix moyen d'un PEA ne se mélange pas à celui d'un compte-titres, comme le contrôle
+ * de vente à découvert de la base), puis les positions sont additionnées.
+ */
+export function computePositionByPortfolio(orders: readonly PortfolioOrder[]): Position {
+  return combinePositions(byPortfolio(orders).map(computePosition));
+}

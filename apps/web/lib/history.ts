@@ -52,11 +52,14 @@ export function buildHistory(
     byInstrument.set(q.instrumentId, list);
   }
 
-  const ordersByInstrument = new Map<string, OrderRow[]>();
+  // une ligne par (portefeuille, titre) : le prix moyen d'une enveloppe ne se mélange pas à
+  // celui d'une autre (coût et gain réalisé de la courbe)
+  const lines = new Map<string, { instrumentId: string; orders: OrderRow[] }>();
   for (const o of orders) {
-    const list = ordersByInstrument.get(o.instrumentId) ?? [];
-    list.push(o);
-    ordersByInstrument.set(o.instrumentId, list);
+    const key = `${o.portfolioId ?? ''}|${o.instrumentId}`;
+    const line = lines.get(key) ?? { instrumentId: o.instrumentId, orders: [] };
+    line.orders.push(o);
+    lines.set(key, line);
   }
 
   const firstOrder = orders.map((o) => parisDate(o.executedAt)).reduce((a, b) => (a < b ? a : b));
@@ -65,9 +68,9 @@ export function buildHistory(
     .sort();
 
   return buildSnapshots(
-    [...ordersByInstrument].map(([id, list]) => ({
-      orders: list,
-      closes: byInstrument.get(id) ?? [],
+    [...lines.values()].map((l) => ({
+      orders: l.orders,
+      closes: byInstrument.get(l.instrumentId) ?? [],
     })),
     dates,
     incomeFlows(movements),

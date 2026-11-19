@@ -1,5 +1,6 @@
 import {
   buildSnapshots,
+  byPortfolio,
   describeCondition,
   fmtEur,
   fmtPct,
@@ -28,7 +29,7 @@ export interface ReportInput {
   baseDay: string;
   /** Jour du rapport (dernier jour de bourse de la période) */
   day: string;
-  orders: readonly (Order & { instrumentId: string })[];
+  orders: readonly (Order & { instrumentId: string; portfolioId?: string | null })[];
   closes: readonly { instrumentId: string; date: string; close: number }[];
   /** Cours du jour (complète la clôture du jour si elle n'est pas encore enregistrée) */
   prices: ReadonlyMap<string, number>;
@@ -70,10 +71,13 @@ export function reportFigures(input: ReportInput): ReportFigures {
     ]),
   ].sort();
   const snaps = buildSnapshots(
-    ids.map((id) => ({
-      orders: input.orders.filter((o) => o.instrumentId === id),
-      closes: closesOf(id),
-    })),
+    // une ligne par (portefeuille, titre) : chaque enveloppe est rejouée à part
+    ids.flatMap((id) =>
+      byPortfolio(input.orders.filter((o) => o.instrumentId === id)).map((orders) => ({
+        orders,
+        closes: closesOf(id),
+      })),
+    ),
     dates,
     input.income,
   );
