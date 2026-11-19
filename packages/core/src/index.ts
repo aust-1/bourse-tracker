@@ -11,3 +11,4 @@ export * from './splits';
 export * from './tax';
 export * from './performance';
 export * from './isin';
+export * from './pea-rules';
