@@ -162,7 +162,9 @@ après 3 échecs consécutifs de Yahoo (pendant 15 minutes, puis retente Yahoo) 
 Twelve Data (plan Grow, 29 $/mois pour l'Europe), et remplacer `new YahooProvider()` dans `apps/worker/src/index.ts`
 et `apps/web/lib/yahoo.ts` : un fichier de plus, aucune autre modification.
 
-**Le worker ne « ping » plus** : Healthchecks.io t'envoie un email. `docker compose ps`, puis `docker compose restart worker`.
+**Le worker ne « ping » plus** : Healthchecks.io t'envoie un email. Le ping part après chaque cycle terminé :
+il cesse si le processus s'arrête, mais aussi si la boucle est bloquée ou si chaque cycle échoue (Supabase
+injoignable). `docker compose logs worker`, `docker compose ps`, puis `docker compose restart worker`.
 
 **Le site ne répond plus** : `docker compose logs web`, puis, depuis `/opt`, `scripts/status.sh` (route publiée ?
 alias réseau correct ?) et `docker logs caddy`, puis `sudo opt-deploy bourse-tracker`.

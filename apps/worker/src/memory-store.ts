@@ -79,9 +79,13 @@ export class MemoryStore implements Store {
     return this.orders.filter((o) => o.userId === userId && o.instrumentId === instrumentId);
   }
 
+  /** Nombre d'événements de chaque alerte au moment de sa prise */
+  eventsAtClaim = new Map<string, number>();
+
   async claimAlert(alertId: string, at: Date = new Date()) {
     const a = this.alerts.find((x) => x.id === alertId);
     if (!a || a.status !== 'active') return false;
+    this.eventsAtClaim.set(alertId, this.events.filter((e) => e.alertId === alertId).length);
     a.status = 'triggered';
     a.lastTriggeredAt = at.toISOString();
     return true;
@@ -107,6 +111,19 @@ export class MemoryStore implements Store {
   async releaseAlert(alertId: string) {
     const a = this.alerts.find((x) => x.id === alertId);
     if (a) a.status = 'active';
+  }
+
+  async releaseInterruptedAlerts(claimedBefore: Date) {
+    const ids: string[] = [];
+    for (const a of this.alerts) {
+      if (a.status !== 'triggered' || !a.lastTriggeredAt) continue;
+      if (new Date(a.lastTriggeredAt) >= claimedBefore) continue;
+      const recorded = this.events.filter((e) => e.alertId === a.id).length;
+      if (recorded > (this.eventsAtClaim.get(a.id) ?? 0)) continue;
+      a.status = 'active';
+      ids.push(a.id);
+    }
+    return ids;
   }
 
   async recordAlertEvent(e: {
