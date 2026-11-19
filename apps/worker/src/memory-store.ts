@@ -1,4 +1,4 @@
-import type { Order } from '@bourse/core';
+import type { PortfolioOrder } from '@bourse/core';
 import type {
   AlertEventRow,
   AlertRow,
@@ -66,7 +66,7 @@ export class MemoryStore implements Store {
   }
 
   alerts: (AlertRow & { status: 'active' | 'triggered' })[] = [];
-  orders: (Order & { userId: string; instrumentId: string })[] = [];
+  orders: (PortfolioOrder & { userId: string; instrumentId: string })[] = [];
   settings: UserSettings[] = [];
   events: { alertId: string; userId: string; value: number; delivery: Record<string, string> }[] =
     [];

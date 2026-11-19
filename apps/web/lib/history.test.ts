@@ -35,6 +35,17 @@ describe('buildHistory', () => {
     expect(h[4]).toMatchObject({ marketValue: 1200 });
   });
 
+  it('un même titre sur deux portefeuilles : coût et réalisé calculés enveloppe par enveloppe', () => {
+    const two: OrderRow[] = [
+      { ...order('1', 'buy', 10, 100, '2026-08-24T08:00:00Z'), portfolioId: 'pea' },
+      { ...order('2', 'buy', 10, 110, '2026-09-01T08:00:00Z'), portfolioId: 'cto' },
+      { ...order('3', 'sell', 10, 110, '2026-09-15T08:00:00Z'), portfolioId: 'cto' },
+    ];
+    const end = buildHistory(two, closes, []).at(-1)!;
+    // PEA : 10 au PRU de 100 ; CTO soldé sans gain (vente à son propre PRU)
+    expect(end).toMatchObject({ marketValue: 1200, costBasis: 1000, realizedPl: 0 });
+  });
+
   it('ignore les séances antérieures au premier ordre', () => {
     const late = [order('1', 'buy', 10, 100, '2026-09-01T08:00:00Z')];
     expect(buildHistory(late, closes, [])[0]!.date).toBe('2026-09-01');

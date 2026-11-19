@@ -1,4 +1,4 @@
-import type { AlertType, Order } from '@bourse/core';
+import type { AlertType, PortfolioOrder } from '@bourse/core';
 
 export interface TrackedInstrument {
   id: string;
@@ -74,8 +74,8 @@ export interface Store {
   rearmAlert(alertId: string): Promise<void>;
   /** Nouveau plus haut observé pour une alerte de baisse depuis le plus haut. */
   updateAlertReference(alertId: string, value: number): Promise<void>;
-  /** Ordres d'un utilisateur sur un instrument (pour calculer le PRU). */
-  getOrders(userId: string, instrumentId: string): Promise<Order[]>;
+  /** Ordres d'un utilisateur sur un instrument, avec leur portefeuille (pour calculer le PRU). */
+  getOrders(userId: string, instrumentId: string): Promise<PortfolioOrder[]>;
   /** Passe l'alerte de `active` à `triggered` ; false si une autre exécution l'a déjà prise. */
   claimAlert(alertId: string, at: Date): Promise<boolean>;
   /** Remet l'alerte en `active` (échec total d'envoi : on réessaiera au prochain cycle). */
@@ -91,7 +91,8 @@ export interface Store {
   /** Réglages des administrateurs : destinataires des messages système (panne de la source…). */
   listAdminSettings(): Promise<UserSettings[]>;
 
-  listUserOrders(userId: string): Promise<(Order & { instrumentId: string })[]>;
+  /** Ordres d'un utilisateur, avec leur portefeuille : chaque enveloppe est rejouée à part. */
+  listUserOrders(userId: string): Promise<(PortfolioOrder & { instrumentId: string })[]>;
   listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]>;
   /** Consigne l'envoi du résumé du jour (`day` = YYYY-MM-DD, Paris). */
   markSummarySent(userId: string, day: string): Promise<void>;

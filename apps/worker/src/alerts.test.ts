@@ -241,4 +241,39 @@ describe('alertes enrichies', () => {
     const muchLater = new Date(inSession.getTime() + 3 * 3600_000);
     expect((await run(store, 100, muchLater)).rearmed).toBe(0);
   });
+
+  it('gain sur la position : PRU calculé portefeuille par portefeuille', async () => {
+    // PEA : 10 à 100 ; CTO : 10 achetés à 200 puis vendus → position 10 au PRU de 100
+    const store = setup('position_pl_above', 50);
+    const order = (
+      id: string,
+      portfolioId: string,
+      side: 'buy' | 'sell',
+      unitPrice: number,
+      day: number,
+    ) => ({
+      id,
+      userId: 'u1',
+      instrumentId: 'i1',
+      portfolioId,
+      side,
+      quantity: 10,
+      unitPrice,
+      fees: 0,
+      executedAt: `2026-01-0${day}T09:00:00Z`,
+    });
+    store.orders = [
+      order('o1', 'pea', 'buy', 100, 5),
+      order('o2', 'cto', 'buy', 200, 6),
+      order('o3', 'cto', 'sell', 200, 7),
+    ];
+    // cours 160 : +60 % sur un PRU de 100 (un PRU mélangé de 150 donnerait +6,7 %)
+    const r = await evaluateAlerts([quote(160)], {
+      store,
+      notifier: notifierReturning({ discord: 'sent' }),
+      log: silentLogger,
+      now: inSession,
+    });
+    expect(r.triggered).toBe(1);
+  });
 });

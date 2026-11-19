@@ -116,3 +116,18 @@ describe('avgCostSeries', () => {
     expect(s).toEqual([null]);
   });
 });
+
+describe('avgCostSeries : plusieurs portefeuilles', () => {
+  it('PRU combiné des positions de chaque enveloppe', () => {
+    const t = Date.parse('2026-09-30T10:00:00Z');
+    const s = avgCostSeries(
+      [
+        { ...o('1', 'buy', 10, 100, '2026-09-01T10:00:00Z'), portfolioId: 'pea' },
+        { ...o('2', 'buy', 10, 200, '2026-09-02T10:00:00Z'), portfolioId: 'cto' },
+        { ...o('3', 'sell', 10, 200, '2026-09-03T10:00:00Z'), portfolioId: 'cto' },
+      ],
+      [t],
+    );
+    expect(s).toEqual([100]);
+  });
+});

@@ -1,6 +1,6 @@
 import {
   buildPortfolioView,
-  computePosition,
+  computePositionByPortfolio,
   evaluateAlert,
   isPollingWindow,
   isPortfolioAlert,
@@ -76,7 +76,10 @@ function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps) {
     const ctx: AlertContext = { price: q.price, prevClose: q.prevClose };
     if (alert.type.startsWith('position_pl')) {
       try {
-        const pos = computePosition(await store.getOrders(alert.userId, alert.instrumentId!));
+        // PRU de la position, portefeuille par portefeuille puis additionnée
+        const pos = computePositionByPortfolio(
+          await store.getOrders(alert.userId, alert.instrumentId!),
+        );
         ctx.avgCost = pos.quantity > 0 ? pos.avgCost : null;
       } catch (e) {
         log.warn('position illisible pour une alerte', { alert: alert.id, error: String(e) });

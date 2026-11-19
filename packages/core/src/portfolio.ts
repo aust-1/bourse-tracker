@@ -1,6 +1,12 @@
 import { parisDate } from './market';
-import { applyOrder, EMPTY_POSITION, sortOrders } from './positions';
-import type { Order } from './types';
+import {
+  applyOrder,
+  combinePositions,
+  EMPTY_POSITION,
+  sortOrders,
+  type PortfolioOrder,
+} from './positions';
+import type { Order, Position } from './types';
 
 export interface InstrumentHistory {
   orders: readonly Order[];
@@ -96,15 +102,16 @@ export function buildSnapshots(
 /**
  * PRU de la position à chaque instant de `times` (ms depuis l'epoch, croissants) ; `null` quand
  * aucune position n'est ouverte. Avec `byDay`, un ordre compte dès le point de sa date parisienne
- * (points journaliers dont l'horodatage précède l'heure d'exécution).
+ * (points journaliers dont l'horodatage précède l'heure d'exécution). Un titre détenu dans
+ * plusieurs portefeuilles est rejoué enveloppe par enveloppe, puis les positions additionnées.
  */
 export function avgCostSeries(
-  orders: readonly Order[],
+  orders: readonly PortfolioOrder[],
   times: readonly number[],
   byDay = false,
 ): (number | null)[] {
   const sorted = sortOrders(orders);
-  let pos = EMPTY_POSITION;
+  const positions = new Map<string, Position>();
   let i = 0;
   return times.map((t) => {
     const day = byDay ? parisDate(new Date(t)) : null;
@@ -114,9 +121,12 @@ export function avgCostSeries(
         ? parisDate(sorted[i]!.executedAt) <= day
         : new Date(sorted[i]!.executedAt).getTime() <= t)
     ) {
-      pos = applyOrder(pos, sorted[i]!);
+      const o = sorted[i]!;
+      const key = o.portfolioId ?? '';
+      positions.set(key, applyOrder(positions.get(key) ?? EMPTY_POSITION, o));
       i++;
     }
+    const pos = combinePositions([...positions.values()]);
     return pos.quantity > 0 ? pos.avgCost : null;
   });
 }
