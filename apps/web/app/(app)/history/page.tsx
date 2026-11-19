@@ -1,4 +1,4 @@
-import { parisDate, rebaseCloses, twrIndex } from '@bourse/core';
+import { parisDate, rebaseCloses, tracksCash, twrIndex, withCash } from '@bourse/core';
 import Link from 'next/link';
 import { LineChart } from '@/components/line-chart';
 import { Pl } from '@/components/pl';
@@ -36,7 +36,11 @@ export default async function HistoryPage({
   const ids = [...new Set(orders.map((o) => o.instrumentId))];
   const closes = await loadCloses(supabase, ids);
 
-  const snaps = buildHistory(orders, closes, quotes, movements);
+  // liquidités suivies (versements enregistrés) : valeur totale du portefeuille, apports =
+  // versements − retraits ; un achat payé avec l'argent déjà versé ne fait plus bouger la courbe
+  const withLiquidity = tracksCash(movements);
+  const securities = buildHistory(orders, closes, quotes, movements);
+  const snaps = withLiquidity ? withCash(securities, orders, movements) : securities;
   const stats = periodStats(snaps, range, parisDate(new Date()));
 
   const withHistory = new Set(closes.map((c) => c.instrumentId));
@@ -108,6 +112,7 @@ export default async function HistoryPage({
             <div className="card">
               <p className="text-xs text-slate-500">Valeur actuelle</p>
               <p className="mt-1 display tabular-nums">{eur(stats.end.marketValue)}</p>
+              {withLiquidity && <p className="mt-1 text-xs text-slate-500">titres + liquidités</p>}
             </div>
             <div className="card">
               <p className="text-xs text-slate-500">Gain sur la période</p>
@@ -115,7 +120,7 @@ export default async function HistoryPage({
                 <Pl value={stats.gain} />
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Hors apports (achats et ventes)
+                {withLiquidity ? 'Hors versements et retraits' : 'Hors apports (achats et ventes)'}
                 {stats.income !== 0 && <>, dont {eur(stats.income)} de dividendes nets</>}
               </p>
             </div>
@@ -142,13 +147,17 @@ export default async function HistoryPage({
             <div className="card">
               <p className="text-xs text-slate-500">Apports nets</p>
               <p className="mt-1 display tabular-nums">{eur(stats.contributions)}</p>
-              <p className="mt-1 text-xs text-slate-500">Achats moins ventes sur la période</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {withLiquidity
+                  ? 'Versements moins retraits sur la période'
+                  : 'Achats moins ventes sur la période'}
+              </p>
             </div>
           </div>
 
           <LineChart
-            label="Valeur du portefeuille"
-            refLabel="Montant investi"
+            label={withLiquidity ? 'Valeur totale (titres + liquidités)' : 'Valeur du portefeuille'}
+            refLabel={withLiquidity ? 'Versements nets' : 'Montant investi'}
             axis="date"
             data={stats.points.map((s) => ({
               t: Date.parse(`${s.date}T12:00:00Z`),
