@@ -37,9 +37,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Version fixe : une nouvelle CLI (images Postgres, GoTrue, Realtime) ne doit pas changer la CI
+      # sans revue. Mise à jour volontaire, en même temps que la commande du README.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.2.0
       - name: Démarrer Supabase local (services minimaux)
         run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta
       - name: 'Tests de la base (pgTAP, RLS, contraintes, anti-vente à découvert)'
