@@ -6,6 +6,8 @@ export interface TrackedInstrument {
   name: string;
   /** null tant que la source ne l'a pas fourni */
   assetType?: 'etf' | 'equity' | null;
+  /** Dans la liste de suivi d'au moins un compte (historique rempli même sans ordre) */
+  watched?: boolean;
 }
 
 export interface StoredQuote {
@@ -48,7 +50,7 @@ export interface UserSettings {
 
 /** Accès aux données du worker : implémenté par Supabase (prod) et en mémoire (tests). */
 export interface Store {
-  /** Instruments à suivre : ceux qui ont au moins un ordre ou une alerte active. */
+  /** Instruments à coter : au moins un ordre, une alerte active, ou dans une liste de suivi. */
   listTrackedInstruments(): Promise<TrackedInstrument[]>;
   getQuotes(instrumentIds: readonly string[]): Promise<Map<string, StoredQuote>>;
   upsertQuote(q: Omit<StoredQuote, 'fetchedAt'>): Promise<void>;

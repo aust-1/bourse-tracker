@@ -8,6 +8,7 @@ const links = [
   { href: '/', label: 'Tableau de bord' },
   { href: '/orders', label: 'Ordres' },
   { href: '/alerts', label: 'Alertes' },
+  { href: '/watchlist', label: 'Suivi' },
   { href: '/history', label: 'Historique' },
   { href: '/cash', label: 'Mouvements' },
   { href: '/portfolios', label: 'Portefeuilles' },

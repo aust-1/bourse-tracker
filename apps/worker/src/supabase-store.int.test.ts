@@ -133,6 +133,18 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     expect(orders[0]).toMatchObject({ side: 'buy', quantity: 1, unitPrice: 100 });
   });
 
+  it('suit aussi les titres de la liste de suivi, sans ordre ni alerte', async () => {
+    const store = new SupabaseStore(db);
+    const ign = await db.from('instruments').select('id').eq('yahoo_symbol', 'IGN.PA').single();
+    await db
+      .from('user_instruments')
+      .upsert({ user_id: userId, instrument_id: ign.data!.id, watched: true });
+    const tracked = await store.listTrackedInstruments();
+    expect(tracked.find((t) => t.symbol === 'IGN.PA')).toMatchObject({ watched: true });
+    expect(tracked.find((t) => t.symbol === 'CW8.PA')).toMatchObject({ watched: false });
+    await db.from('user_instruments').delete().eq('instrument_id', ign.data!.id);
+  });
+
   it('pipeline complet : cote → alerte → Discord (simulé) → statut et historique en base', async () => {
     const store = new SupabaseStore(db);
     await db.from('alerts').delete().not('id', 'is', null);
