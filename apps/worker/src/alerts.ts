@@ -2,6 +2,7 @@ import {
   buildPortfolioView,
   computePosition,
   evaluateAlert,
+  isCurrentSessionQuote,
   isPollingWindow,
   isPortfolioAlert,
   nextHigh,
@@ -28,7 +29,12 @@ interface Deps {
  * null si les données du cycle ne permettent pas de l'évaluer. Les calculs coûteux (position,
  * portefeuille d'un compte) sont faits une fois par cycle.
  */
-function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps) {
+function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps, now: Date) {
+  // seules les cotes de la séance en cours déclenchent : entre 08:55 et 09:00, ou pour une place
+  // fermée un jour de bourse Euronext, la cote du cycle est celle de la séance précédente
+  const session = new Set(
+    quotes.filter((q) => isCurrentSessionQuote(q.quotedAt, now)).map((q) => q.instrument.id),
+  );
   const byInstrument = new Map(quotes.map((q) => [q.instrument.id, q]));
   const quoteRows = new Map<string, QuoteRow>(
     quotes.map((q) => [
@@ -36,7 +42,8 @@ function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps) {
       {
         instrumentId: q.instrument.id,
         price: q.price,
-        prevClose: q.prevClose,
+        // portefeuille : une ligne sans cote du jour garde son dernier cours, sans variation du jour
+        prevClose: session.has(q.instrument.id) ? q.prevClose : q.price,
         quotedAt: q.quotedAt.toISOString(),
         fetchedAt: q.quotedAt.toISOString(),
       },
@@ -51,6 +58,8 @@ function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps) {
         const orders = await store.listUserOrders(userId);
         if (orders.length === 0) return null;
         const ids = [...new Set(orders.map((o) => o.instrumentId))];
+        // aucune ligne cotée dans la séance : rien de neuf à évaluer
+        if (!ids.some((id) => session.has(id))) return null;
         const { totals } = buildPortfolioView(
           orders,
           ids.map((id) => ({ id, symbol: '', name: '' })),
@@ -72,7 +81,7 @@ function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps) {
       return ctx ? { ctx } : null;
     }
     const q = alert.instrumentId ? byInstrument.get(alert.instrumentId) : undefined;
-    if (!q) return null;
+    if (!q || !session.has(q.instrument.id)) return null;
     const ctx: AlertContext = { price: q.price, prevClose: q.prevClose };
     if (alert.type.startsWith('position_pl')) {
       try {
@@ -103,7 +112,7 @@ export async function evaluateAlerts(
   const { store, notifier, log, now = new Date() } = deps;
   if (!isPollingWindow(now) || quotes.length === 0) return { triggered: 0, rearmed: 0 };
 
-  const contextOf = contextBuilder(quotes, deps);
+  const contextOf = contextBuilder(quotes, deps, now);
   let triggered = 0;
   let rearmed = 0;
 
