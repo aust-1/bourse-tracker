@@ -29,6 +29,8 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       NTFY_HOSTS: ${NTFY_HOSTS:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      # Content-Security-Policy : signalée seulement (Report-Only) tant que vide, bloquante avec 1
+      CSP_ENFORCE: ${CSP_ENFORCE:-}
     networks:
       default: {}
       proxy:

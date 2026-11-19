@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Fira_Code, VT323 } from 'next/font/google';
+import { headers } from 'next/headers';
 import Script from 'next/script';
 import './globals.css';
 
@@ -34,7 +35,9 @@ export const viewport: Viewport = {
   // le site reste zoomable (accessibilité)
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // nonce de la Content-Security-Policy (proxy.ts) : le script de statistiques doit le porter
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html lang="fr" className={`${fira.variable} ${vt323.variable}`}>
       <body>
@@ -45,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             src="https://analytics.eliott-roussille.fr/api/script.js?siteId=2a423da9594b"
             data-site-id="3"
             strategy="afterInteractive"
+            nonce={nonce}
           />
         )}
       </body>

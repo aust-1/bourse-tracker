@@ -20,6 +20,8 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY,
+      // les parcours tournent avec la CSP bloquante : une page cassée par la politique échoue
+      CSP_ENFORCE: '1',
     },
   },
 });
