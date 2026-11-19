@@ -284,6 +284,51 @@ export class SupabaseStore implements Store {
     if (error) throw new Error(`remise en active de l'alerte : ${error.message}`);
   }
 
+  async releaseInterruptedAlerts(claimedBefore: Date): Promise<string[]> {
+    const claimed = must(
+      await this.db
+        .from('alerts')
+        .select('id, last_triggered_at')
+        .eq('status', 'triggered')
+        .lt('last_triggered_at', claimedBefore.toISOString()),
+      'lecture des alertes déclenchées',
+    );
+    if (claimed.length === 0) return [];
+    const events = must(
+      await this.db
+        .from('alert_events')
+        .select('alert_id, triggered_at')
+        .in(
+          'alert_id',
+          claimed.map((a) => a.id),
+        ),
+      "lecture de l'historique d'alertes",
+    );
+    const lastEvent = new Map<string, number>();
+    for (const e of events) {
+      const t = Date.parse(e.triggered_at);
+      if (t > (lastEvent.get(e.alert_id) ?? -Infinity)) lastEvent.set(e.alert_id, t);
+    }
+    const ids: string[] = [];
+    for (const a of claimed) {
+      // l'événement est daté par la base, la prise par l'horloge du worker : marge d'une minute
+      const claimedAt = Date.parse(a.last_triggered_at!) - 60_000;
+      if ((lastEvent.get(a.id) ?? -Infinity) >= claimedAt) continue;
+      const rows = must(
+        await this.db
+          .from('alerts')
+          .update({ status: 'active' })
+          .eq('id', a.id)
+          .eq('status', 'triggered')
+          .eq('last_triggered_at', a.last_triggered_at!)
+          .select('id'),
+        "remise en active d'une alerte interrompue",
+      );
+      if (rows.length === 1) ids.push(a.id);
+    }
+    return ids;
+  }
+
   async recordAlertEvent(e: {
     alertId: string;
     userId: string;

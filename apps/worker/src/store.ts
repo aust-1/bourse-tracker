@@ -80,6 +80,11 @@ export interface Store {
   claimAlert(alertId: string, at: Date): Promise<boolean>;
   /** Remet l'alerte en `active` (échec total d'envoi : on réessaiera au prochain cycle). */
   releaseAlert(alertId: string): Promise<void>;
+  /**
+   * Remet en `active` les alertes prises avant `claimedBefore` qui n'ont aucun événement
+   * d'historique depuis leur prise (envoi interrompu par un arrêt du worker) ; renvoie leurs ids.
+   */
+  releaseInterruptedAlerts(claimedBefore: Date): Promise<string[]>;
   recordAlertEvent(e: {
     alertId: string;
     userId: string;
