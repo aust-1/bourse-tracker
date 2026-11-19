@@ -303,7 +303,8 @@ export class SupabaseStore implements Store {
     return {
       userId: r.user_id,
       discordWebhookUrl: r.discord_webhook_url,
-      email: r.email,
+      // une adresse non confirmée ne reçoit rien (voir la migration notification_email_verification)
+      email: r.email_verified ? r.email : null,
       summaryEnabled: r.summary_enabled,
       summaryTime: r.summary_time,
       lastSummaryOn: r.last_summary_on,
@@ -435,6 +436,42 @@ export class SupabaseStore implements Store {
     const rows = must(await this.db.from('settings').select('*'), 'lecture des réglages');
     const disabled = await this.disabledUsers();
     return rows.filter((r) => !disabled.has(r.user_id)).map((r) => this.toSettings(r));
+  }
+
+  async listEmailVerificationRequests(): Promise<{ userId: string; email: string }[]> {
+    const rows = must(
+      await this.db
+        .from('notification_email_verifications')
+        .select('user_id, email')
+        .not('requested_at', 'is', null),
+      'lecture des demandes de confirmation',
+    );
+    return rows.map((r) => ({ userId: r.user_id, email: r.email }));
+  }
+
+  async saveEmailVerificationCode(
+    userId: string,
+    email: string,
+    codeHash: string,
+    expiresAt: Date,
+  ): Promise<boolean> {
+    const rows = must(
+      await this.db
+        .from('notification_email_verifications')
+        .update({
+          code_hash: codeHash,
+          code_expires_at: expiresAt.toISOString(),
+          attempts: 0,
+          requested_at: null,
+          sent_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('email', email)
+        .not('requested_at', 'is', null)
+        .select('user_id'),
+      'enregistrement du code de confirmation',
+    );
+    return rows.length === 1;
   }
 
   async listAdminSettings(): Promise<UserSettings[]> {
