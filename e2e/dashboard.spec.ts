@@ -91,3 +91,30 @@ test('fiche instrument : graphique, position et ordres', async ({ page }) => {
   await page.getByRole('tab', { name: '1 M' }).click();
   await expect(page.getByRole('tab', { name: '1 M' })).toHaveAttribute('aria-selected', 'true');
 });
+
+test('en-tête : nom du site distinct des onglets, onglet actif et titre de l’onglet du navigateur', async ({
+  page,
+}) => {
+  await resetData();
+  await login(page);
+  await expect(page).toHaveTitle('Tableau de bord · Bourse Tracker');
+  const menu = page.getByRole('navigation', { name: 'Menu principal' });
+  await expect(menu.getByRole('link', { name: /tableau de bord/ })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  // le nom du site n'est pas un onglet du menu
+  await expect(menu.getByRole('link', { name: 'BOURSE.SYS' })).toHaveCount(0);
+
+  await menu.getByRole('link', { name: /ordres/ }).click();
+  await page.waitForURL('**/orders');
+  await expect(page).toHaveTitle('Ordres · Bourse Tracker');
+  await expect(menu.getByRole('link', { name: /ordres/ })).toHaveAttribute('aria-current', 'page');
+  await page.goto('/orders/new');
+  await expect(page).toHaveTitle('Nouvel ordre · Bourse Tracker');
+  await expect(menu.getByRole('link', { name: /ordres/ })).toHaveAttribute('aria-current', 'page');
+
+  // retour au tableau de bord par le nom du site
+  await page.getByRole('link', { name: 'BOURSE.SYS' }).click();
+  await page.waitForURL((url) => url.pathname === '/');
+});

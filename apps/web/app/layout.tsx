@@ -12,7 +12,8 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
-  title: 'Bourse Tracker',
+  // titre de l'onglet du navigateur : la page d'abord, pour distinguer plusieurs onglets ouverts
+  title: { default: 'Bourse Tracker', template: '%s · Bourse Tracker' },
   applicationName: 'Bourse Tracker',
   icons: {
     // favicon : .ico (16, 32, 48 px) pour les navigateurs qui le demandent d'office, SVG net à toute taille
