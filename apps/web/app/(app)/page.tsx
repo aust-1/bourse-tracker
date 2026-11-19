@@ -1,4 +1,4 @@
-import { summarizeCash } from '@bourse/core';
+import { parisDate, summarizeCash, tracksCash, withCash } from '@bourse/core';
 import { LiveDashboard } from '@/components/live-dashboard';
 import { Sparkline } from '@/components/sparkline';
 import { loadCash } from '@/lib/cash';
@@ -21,15 +21,25 @@ export default async function Dashboard() {
   ]);
   // liquidités affichées dès qu'un mouvement est enregistré
   const cash = movements.length > 0 ? summarizeCash(orders, movements) : null;
+  // versements nets du jour : exclus de la base de la variation du jour sur la valeur totale
+  const today = parisDate(new Date());
+  const netDepositsToday = movements
+    .filter((m) => m.occurredOn === today)
+    .reduce(
+      (s, m) => s + (m.kind === 'deposit' ? m.amount : m.kind === 'withdrawal' ? -m.amount : 0),
+      0,
+    );
 
   // mini-courbe : 30 dernières séances (échec de lecture : le tableau de bord reste utilisable)
   let trend: number[];
   let invested: number[];
   try {
     const ids = [...new Set(orders.map((o) => o.instrumentId))];
-    const snaps = buildHistory(orders, await loadCloses(supabase, ids), quotes, movements).slice(
-      -30,
-    );
+    const securities = buildHistory(orders, await loadCloses(supabase, ids), quotes, movements);
+    // liquidités suivies : valeur totale et versements nets, comme la page Historique
+    const snaps = (
+      tracksCash(movements) ? withCash(securities, orders, movements) : securities
+    ).slice(-30);
     trend = snaps.map((s) => s.marketValue);
     invested = snaps.map((s) => s.netContributions);
   } catch {
@@ -62,7 +72,12 @@ export default async function Dashboard() {
         peaOnly={peaOnly}
         cash={
           cash
-            ? { balance: cash.balance, deposits: cash.deposits, dividends: cash.dividends }
+            ? {
+                balance: cash.balance,
+                deposits: cash.deposits,
+                dividends: cash.dividends,
+                netDepositsToday,
+              }
             : null
         }
       />
