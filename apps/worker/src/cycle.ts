@@ -1,6 +1,6 @@
 import { isMarketOpen, isPollingWindow, isWorkWindow } from '@bourse/core';
 import type { Message, Notifier, PriceProvider } from '@bourse/providers';
-import { evaluateAlerts } from './alerts';
+import { DeliveryRetries, evaluateAlerts } from './alerts';
 import type { HistoryJob } from './history';
 import type { Logger } from './log';
 import type { SourceMonitor } from './monitor';
@@ -36,6 +36,8 @@ const guarded = (log: Logger, what: string) => (e: unknown) =>
 export class Cycle {
   private first = true;
   private lastMaintenance = 0;
+  /** Alertes dont l'envoi a échoué, d'un cycle à l'autre */
+  private readonly retries = new DeliveryRetries();
 
   constructor(private readonly d: Deps) {}
 
@@ -74,7 +76,9 @@ export class Cycle {
         const sourceOk = quotes.length > 0 || result.failed.length === 0;
         if (!sourceOk) error = `aucune cote obtenue (${result.failed.length} échecs)`;
         await monitor.check(now, sourceOk, notifyAll).catch(guarded(log, 'supervision'));
-        await evaluateAlerts(quotes, { store, notifier, log, now }).catch(guarded(log, 'alertes'));
+        await evaluateAlerts(quotes, { store, notifier, log, now, retries: this.retries }).catch(
+          guarded(log, 'alertes'),
+        );
       } else {
         await this.bootstrapNewInstruments();
       }
