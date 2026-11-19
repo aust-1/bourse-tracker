@@ -9,11 +9,18 @@ import {
   isWorkWindow,
   type PortfolioView,
 } from '@bourse/core';
-import { ALL_CHANNELS, allFailed, type Message, type Notifier } from '@bourse/providers';
+import {
+  ALL_CHANNELS,
+  allFailed,
+  type Message,
+  type MessageSection,
+  type Notifier,
+} from '@bourse/providers';
 import type { Logger } from './log';
 import type { AlertEventRow, Store } from './store';
 
 const signed = (n: number) => `${n > 0 ? '+' : ''}${fmtEur(n)}`;
+const num = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 4 });
 
 /** "17:45" ou "17:45:00" → minutes depuis minuit */
 export function timeToMinutes(t: string): number {
@@ -57,7 +64,32 @@ export function summaryMessage(
   );
 
   const [y, m, d] = day.split('-');
-  return { title: `📊 Résumé du ${d}/${m}/${y}`, body: lines.join('\n'), level: 'info' };
+  return {
+    title: `📊 Résumé du ${d}/${m}/${y}`,
+    body: lines.join('\n'),
+    level: 'info',
+    sections: lineSections(rows),
+  };
+}
+
+/** Une section par ligne du portefeuille (un embed chacune sur Discord), par valeur décroissante. */
+export function lineSections(rows: PortfolioView['rows']): MessageSection[] {
+  return rows.map((r) => {
+    const parts = [
+      `${num(r.quantity)} titre${r.quantity > 1 ? 's' : ''} · PRU ${fmtEur(r.avgCost)}`,
+    ];
+    if (r.quote) {
+      parts.push(
+        `Cours ${fmtEur(r.quote.price)}${r.dayChangePct === null ? '' : ` (${fmtPct(r.dayChangePct)})`}`,
+        `Valeur ${fmtEur(r.marketValue!)} · latent ${signed(r.unrealizedPl!)}${r.unrealizedPlPct === null ? '' : ` (${fmtPct(r.unrealizedPlPct)})`}`,
+      );
+      if (r.dayPl !== null) parts.push(`Jour ${signed(r.dayPl)}`);
+    } else {
+      parts.push('Pas de cotation aujourd’hui');
+    }
+    const level = r.dayPl === null || r.dayPl === 0 ? 'info' : r.dayPl > 0 ? 'success' : 'warning';
+    return { title: `${r.name} (${r.symbol})`, body: parts.join('\n'), level };
+  });
 }
 
 interface Deps {
