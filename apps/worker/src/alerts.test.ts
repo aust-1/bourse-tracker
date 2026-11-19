@@ -241,4 +241,117 @@ describe('alertes enrichies', () => {
     const muchLater = new Date(inSession.getTime() + 3 * 3600_000);
     expect((await run(store, 100, muchLater)).rearmed).toBe(0);
   });
+
+  describe('cotes de la séance en cours seulement', () => {
+    // vendredi 25 septembre 2026, 08:56 Paris : fenêtre de polling ouverte, séance pas encore
+    const beforeOpen = new Date('2026-09-25T06:56:00Z');
+    const lastClose = new Date('2026-09-24T15:30:00Z'); // jeudi 17:30 Paris
+    const stale = (price: number, prevClose = 100): FreshQuote => ({
+      instrument: inst,
+      price,
+      prevClose,
+      quotedAt: lastClose,
+    });
+
+    it("avant l'ouverture, la clôture de la veille ne déclenche rien", async () => {
+      const store = setup('price_below', 105);
+      const notifier = notifierReturning({ discord: 'sent' });
+      const r = await evaluateAlerts([stale(100)], {
+        store,
+        notifier,
+        log: silentLogger,
+        now: beforeOpen,
+      });
+      expect(r.triggered).toBe(0);
+      expect(notifier.notify).not.toHaveBeenCalled();
+      expect(store.alerts[0]!.status).toBe('active');
+    });
+
+    it('place fermée en pleine séance Euronext : cote de la veille ignorée', async () => {
+      const store = setup('day_change_down', -5);
+      const notifier = notifierReturning({ discord: 'sent' });
+      const r = await evaluateAlerts([stale(90, 100)], {
+        store,
+        notifier,
+        log: silentLogger,
+        now: inSession,
+      });
+      expect(r.triggered).toBe(0);
+    });
+
+    it('baisse depuis le plus haut : le plus haut ne suit pas une cote de la veille', async () => {
+      const store = setup('drawdown_from_high', -10);
+      await evaluateAlerts([stale(130)], {
+        store,
+        notifier: notifierReturning({ discord: 'sent' }),
+        log: silentLogger,
+        now: beforeOpen,
+      });
+      expect(store.alerts[0]!.referenceValue ?? null).toBe(null);
+    });
+
+    it('portefeuille : sans aucune cote du jour, pas d’évaluation', async () => {
+      const store = setup('portfolio_value_below', 1500);
+      store.alerts[0]!.instrumentId = null;
+      store.orders = [
+        {
+          id: 'o1',
+          userId: 'u1',
+          instrumentId: 'i1',
+          side: 'buy',
+          quantity: 10,
+          unitPrice: 100,
+          fees: 0,
+          executedAt: '2026-01-05T09:00:00Z',
+        },
+      ];
+      const r = await evaluateAlerts([stale(100)], {
+        store,
+        notifier: notifierReturning({ discord: 'sent' }),
+        log: silentLogger,
+        now: beforeOpen,
+      });
+      expect(r.triggered).toBe(0);
+    });
+
+    it('portefeuille : une ligne sans cote du jour ne compte pas dans la variation du jour', async () => {
+      const store = setup('portfolio_day_change_down', -5);
+      store.alerts[0]!.instrumentId = null;
+      const other = { id: 'i2', symbol: 'SAP.DE', name: 'SAP' };
+      store.orders = [
+        {
+          id: 'o1',
+          userId: 'u1',
+          instrumentId: 'i1',
+          side: 'buy',
+          quantity: 10,
+          unitPrice: 100,
+          fees: 0,
+          executedAt: '2026-01-05T09:00:00Z',
+        },
+        {
+          id: 'o2',
+          userId: 'u1',
+          instrumentId: 'i2',
+          side: 'buy',
+          quantity: 10,
+          unitPrice: 100,
+          fees: 0,
+          executedAt: '2026-01-05T09:00:00Z',
+        },
+      ];
+      // i1 stable aujourd'hui ; i2 (place fermée) a perdu 20 % à la séance précédente
+      const quotes: FreshQuote[] = [
+        quote(100, 100),
+        { instrument: other, price: 80, prevClose: 100, quotedAt: lastClose },
+      ];
+      const r = await evaluateAlerts(quotes, {
+        store,
+        notifier: notifierReturning({ discord: 'sent' }),
+        log: silentLogger,
+        now: inSession,
+      });
+      expect(r.triggered).toBe(0);
+    });
+  });
 });

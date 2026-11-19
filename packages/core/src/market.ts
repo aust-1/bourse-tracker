@@ -147,6 +147,16 @@ export function isPollingWindow(at: Date): boolean {
 }
 
 /**
+ * Cote de la séance du jour : datée du même jour de bourse (Paris) que `now` et postérieure à
+ * l'ouverture de 09:00. Avant l'ouverture (08:55-09:00), ou pour une place fermée un jour ouvré
+ * d'Euronext (jour férié propre à Xetra, Milan…), la cote est celle de la séance précédente.
+ */
+export function isCurrentSessionQuote(quotedAt: Date | string, now: Date): boolean {
+  const day = parisDate(now);
+  return isTradingDay(day) && parisDate(quotedAt) === day && parisMinutes(quotedAt) >= OPEN;
+}
+
+/**
  * Fenêtre de travail du worker : jours de bourse 08:55-23:00 Paris. Les cotes ne sont récupérées
  * que dans la fenêtre de polling ; le reste sert au résumé du soir et à l'historique.
  */

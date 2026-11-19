@@ -7,6 +7,7 @@ import {
   closeMinutes,
   easterSunday,
   euronextHolidays,
+  isCurrentSessionQuote,
   isTradingDay,
   isMarketOpen,
   isPollingWindow,
@@ -141,5 +142,35 @@ describe('fins de période', () => {
   it('fin de la période précédente', () => {
     expect(previousPeriodEnd('weekly', '2026-09-25')).toBe('2026-09-18');
     expect(previousPeriodEnd('monthly', '2026-10-30')).toBe('2026-09-30');
+  });
+});
+
+describe('isCurrentSessionQuote', () => {
+  // vendredi 25 septembre 2026 (heure d'été : Paris = UTC+2)
+  const at = (iso: string) => new Date(iso);
+  it('cote de la séance du jour, après l’ouverture', () => {
+    expect(isCurrentSessionQuote(at('2026-09-25T07:00:00Z'), at('2026-09-25T08:00:00Z'))).toBe(
+      true,
+    );
+  });
+  it('avant l’ouverture (08:55) : la cote est celle de la veille', () => {
+    expect(isCurrentSessionQuote(at('2026-09-24T15:30:00Z'), at('2026-09-25T06:56:00Z'))).toBe(
+      false,
+    );
+  });
+  it('cote datée d’avant 09:00 le jour même : pas encore la séance', () => {
+    expect(isCurrentSessionQuote(at('2026-09-25T06:58:00Z'), at('2026-09-25T07:05:00Z'))).toBe(
+      false,
+    );
+  });
+  it('place fermée un jour de bourse Euronext : cote de la veille', () => {
+    expect(isCurrentSessionQuote(at('2026-09-24T15:30:00Z'), at('2026-09-25T12:00:00Z'))).toBe(
+      false,
+    );
+  });
+  it('jour sans séance Euronext : jamais', () => {
+    expect(isCurrentSessionQuote(at('2026-09-26T10:00:00Z'), at('2026-09-26T10:05:00Z'))).toBe(
+      false,
+    );
   });
 });
