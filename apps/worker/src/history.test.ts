@@ -42,6 +42,26 @@ describe('HistoryJob', () => {
     expect((await store.getHistoryBounds('i1')).min).toBe('2026-01-05');
   });
 
+  it('titre de la liste de suivi sans ordre : un an de clôtures, puis rafraîchi', async () => {
+    const store = new MemoryStore();
+    store.tracked = [{ ...inst, watched: true }];
+    const getDailyCloses = vi.fn(async () => rows);
+    const job = new HistoryJob({ store, provider: { getDailyCloses }, log: silentLogger });
+    await job.tick(monday10h, []);
+    expect(getDailyCloses).toHaveBeenCalledWith('CW8.PA', '1y');
+    expect(getDailyCloses).toHaveBeenCalledWith('CW8.PA', '1mo');
+    expect((await store.getHistoryBounds('i1')).min).toBe('2026-01-05');
+  });
+
+  it('ni ordre ni suivi : rien', async () => {
+    const store = new MemoryStore();
+    store.tracked = [inst];
+    const getDailyCloses = vi.fn(async () => rows);
+    const job = new HistoryJob({ store, provider: { getDailyCloses }, log: silentLogger });
+    await job.tick(monday10h, []);
+    expect(getDailyCloses).not.toHaveBeenCalled();
+  });
+
   it('ne refait pas un remplissage déjà couvert', async () => {
     const { store, getDailyCloses, job } = setup(rows);
     await store.upsertCloses([{ instrumentId: 'i1', date: '2026-01-05', close: 100 }]);

@@ -40,15 +40,26 @@ export class SupabaseStore implements Store {
   }
 
   async listTrackedInstruments(): Promise<TrackedInstrument[]> {
-    const [orders, alerts] = await Promise.all([
+    const [orders, alerts, watchlist] = await Promise.all([
       // paginé : au-delà de 1 000 ordres, une lecture simple ignorerait des instruments
       fetchAll((from, to) =>
         this.db.from('orders').select('instrument_id').order('id').range(from, to),
       ),
       this.db.from('alerts').select('instrument_id').eq('status', 'active'),
+      fetchAll((from, to) =>
+        this.db
+          .from('user_instruments')
+          .select('user_id, instrument_id')
+          .eq('watched', true)
+          .order('instrument_id')
+          .order('user_id')
+          .range(from, to),
+      ),
     ]);
+    const watched = new Set(watchlist.map((w) => w.instrument_id));
     const ids = new Set([
       ...orders.map((o) => o.instrument_id),
+      ...watched,
       // les alertes de portefeuille n'ont pas d'instrument
       ...must(alerts, 'lecture des alertes').flatMap((a) =>
         a.instrument_id ? [a.instrument_id] : [],
@@ -67,6 +78,7 @@ export class SupabaseStore implements Store {
       symbol: r.yahoo_symbol,
       name: r.name,
       assetType: r.asset_type as TrackedInstrument['assetType'],
+      watched: watched.has(r.id),
     }));
   }
 

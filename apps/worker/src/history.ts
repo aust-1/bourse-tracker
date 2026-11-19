@@ -12,6 +12,8 @@ interface Deps {
 
 const DAY_MS = 24 * 3600 * 1000;
 const REFRESH_AFTER_MINUTES = 18 * 60;
+/** Profondeur de l'historique d'un titre suivi sans ordre (`historyRange` → 1 an) */
+const WATCHED_HISTORY_DAYS = 340;
 
 /** 5 min après la clôture (Paris), la cote de l'enchère de clôture est la clôture officielle. */
 const closeFinished = (day: string, minutes: number) => minutes >= closeMinutes(day) + 5;
@@ -23,7 +25,8 @@ export function historyRange(firstOrderDate: string, now: Date): '1mo' | '1y' | 
 
 /**
  * Maintient `price_history` (clôtures journalières) :
- * - remplit l'historique complet d'un instrument dès qu'il a un ordre ;
+ * - remplit l'historique complet d'un instrument dès qu'il a un ordre (un an pour un titre de
+ *   la liste de suivi sans ordre) ;
  * - le rafraîchit au démarrage puis chaque soir après 18:00 ;
  * - enregistre la clôture du jour depuis la cote de fin de séance (la bougie du jour
  *   n'a pas de clôture chez Yahoo avant le lendemain).
@@ -67,7 +70,12 @@ export class HistoryJob {
     const { store, log } = this.deps;
     for (const inst of await store.listTrackedInstruments()) {
       try {
-        const first = await store.getFirstOrderDate(inst.id);
+        // titre de la liste de suivi sans ordre : un an de clôtures
+        const first =
+          (await store.getFirstOrderDate(inst.id)) ??
+          (inst.watched
+            ? parisDate(new Date(now.getTime() - WATCHED_HISTORY_DAYS * DAY_MS))
+            : null);
         if (!first || this.backfilled.get(inst.id) === first) continue;
 
         const bounds = await store.getHistoryBounds(inst.id);
@@ -95,7 +103,7 @@ export class HistoryJob {
 
     for (const inst of await store.listTrackedInstruments()) {
       try {
-        if (!(await store.getFirstOrderDate(inst.id))) continue;
+        if (!inst.watched && !(await store.getFirstOrderDate(inst.id))) continue;
         await this.fetchAndStore(inst.id, inst.symbol, '1mo', now);
       } catch (e) {
         log.warn('rafraîchissement de l’historique en échec', {
