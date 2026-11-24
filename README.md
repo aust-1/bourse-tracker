@@ -53,9 +53,14 @@ chacun ne voit que ses propres ordres, alertes, réglages et titres.
 ## Architecture
 
 ```
-Yahoo Finance ──(30 s, séance)──▶ worker ──▶ Supabase (Postgres, Auth, Realtime) ◀──▶ site Next.js
-                                    │                                                   ▲
-                                    └── alertes, résumé ──▶ Discord / Email            navigateur
+Yahoo Finance ──(30 s, séance)──┐
+  (EODHD en secours)            ▼
+                              worker ──▶ Supabase (Postgres, Auth, Realtime) ◀──▶ site Next.js
+                                │                                                   ▲
+                                └── alertes, résumé, rapport ──▶ Discord           navigateur
+                                                                 Email (Resend)
+                                                                 ntfy
+                                                                 Telegram
 ```
 
 | Dossier              | Rôle                                                                                      |
@@ -63,7 +68,7 @@ Yahoo Finance ──(30 s, séance)──▶ worker ──▶ Supabase (Postgres
 | `apps/web`           | Next.js (App Router, Tailwind, Recharts) : pages, actions serveur, Realtime               |
 | `apps/worker`        | Node : polling des prix, alertes, historique des clôtures, résumé, supervision            |
 | `packages/core`      | Logique métier **pure** : PRU, P&L, gain du jour, alertes, séance, courbe du portefeuille |
-| `packages/providers` | Source de prix (interface `PriceProvider` + Yahoo) et notifications Discord/Resend        |
+| `packages/providers` | Prix (Yahoo, secours EODHD) et notifications Discord, email, ntfy, Telegram               |
 | `packages/db`        | Types générés de la base et lecture paginée                                               |
 | `supabase/`          | Migrations SQL, RLS, tests pgTAP                                                          |
 | `infra/`             | Docker, déploiement, sauvegarde et restauration                                           |
@@ -88,6 +93,28 @@ npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,p
 cp .env.example .env   # pour le worker ; le web lit apps/web/.env.local (URL et clé anon locales)
 pnpm --filter @bourse/web dev
 ```
+
+### Variables d'environnement
+
+Toutes sont décrites dans [`.env.example`](.env.example). En production, `docker-compose.yml` les
+transmet au site et au worker depuis le `.env` de la racine. En local, le site lit
+`apps/web/.env.local` et le worker le `.env` de la racine.
+
+| Variable                        | Site | Worker | Rôle                                                                                   |
+| ------------------------------- | :--: | :----: | -------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      |  ✔   |   ✔    | URL Supabase (le worker la reçoit sous le nom `SUPABASE_URL`)                          |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` |  ✔   |        | Clé anon, publique (protégée par la RLS)                                               |
+| `SUPABASE_SERVICE_ROLE_KEY`     |      |   ✔    | Clé service_role, **secrète** : jamais côté site                                       |
+| `RESEND_API_KEY`, `EMAIL_FROM`  |  ✔   |   ✔    | Email (Resend) : alertes, résumés, et bouton « Envoyer un test » des réglages          |
+| `TELEGRAM_BOT_TOKEN`            |  ✔   |   ✔    | Robot Telegram de l'instance ; vide : canal Telegram masqué                            |
+| `NTFY_HOSTS`                    |  ✔   |   ✔    | Serveurs ntfy autorisés en plus de ntfy.sh ; le site refuse un sujet sur un autre hôte |
+| `EODHD_API_KEY`                 |      |   ✔    | Source de secours des cotes (facultatif)                                               |
+| `HEALTHCHECKS_PING_URL`         |      |   ✔    | Ping de supervision Healthchecks.io (facultatif)                                       |
+| `POLL_INTERVAL_MS`              |      |   ✔    | Intervalle des cycles (30 000 ms par défaut)                                           |
+| `STALE_AFTER_MS`                |      |   ✔    | Délai avant l'alerte « source de prix muette » (300 000 ms par défaut)                 |
+
+Sans `RESEND_API_KEY` ni `TELEGRAM_BOT_TOKEN` dans `apps/web/.env.local`, les boutons de test des
+réglages répondent « non configuré » ; sans `NTFY_HOSTS`, un serveur ntfy auto-hébergé est refusé.
 
 ## Vérifications
 
