@@ -1,8 +1,13 @@
 import Link from 'next/link';
+import { MainNav } from '@/components/main-nav';
 import { PortfolioSwitcher } from '@/components/portfolio-switcher';
+import { pageTitle } from '@/lib/page-title';
 import { portfolioScope } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from '../login/actions';
+
+// onglet du navigateur sur le tableau de bord (chaque section pose le sien)
+export const metadata = pageTitle('Tableau de bord');
 
 const links = [
   { href: '/', label: 'Tableau de bord' },
@@ -29,20 +34,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : links;
   return (
     <div className="mx-auto max-w-6xl pb-16">
-      <header className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-phosphor px-4 py-2 font-semibold text-tube">
-        <span>BOURSE.SYS</span>
-        <nav className="order-last flex basis-full flex-wrap gap-x-4 gap-y-1 text-sm sm:order-none sm:flex-1 sm:basis-auto sm:gap-x-5">
-          {nav.map((l, i) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-tube hover:bg-tube hover:text-phosphor"
-            >
-              <span className="hidden sm:inline">[F{i + 1}] </span>
-              {l.label.toLowerCase()}
-            </Link>
-          ))}
-        </nav>
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-phosphor px-4 py-2 font-semibold text-tube">
+        {/* nom du site : police d'affichage, séparé des onglets par un trait */}
+        <Link
+          href="/"
+          className="border-r-2 border-tube pr-4 font-display text-3xl leading-none tracking-wider text-tube hover:text-tube"
+        >
+          BOURSE.SYS
+        </Link>
+        <MainNav links={nav} />
         <PortfolioSwitcher
           portfolios={scope.portfolios.map((p) => ({ id: p.id, name: p.name }))}
           selected={scope.selected?.id ?? null}
