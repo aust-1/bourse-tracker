@@ -45,3 +45,49 @@ test("division saisie par l'administrateur : position convertie, vente des nouve
   await expect(splits.getByRole('button', { name: 'Ajouter la division' })).toHaveCount(0);
   await expect(splits.getByText('1 ancien → 10 nouveaux')).toBeVisible();
 });
+
+test('supprimer une division dont dépend une vente : refusé, message sur la fiche', async ({
+  page,
+}) => {
+  const { userId, instrumentId } = await resetData();
+  await admin.from('profiles').update({ is_admin: true }).eq('user_id', userId);
+  await admin.from('splits').insert({
+    instrument_id: instrumentId,
+    effective_on: '2026-06-01',
+    ratio_from: 1,
+    ratio_to: 10,
+  });
+  await admin.from('orders').insert([
+    {
+      user_id: userId,
+      instrument_id: instrumentId,
+      side: 'buy',
+      quantity: 10,
+      unit_price: 500,
+      executed_at: '2026-05-04T08:00:00Z',
+    },
+    {
+      user_id: userId,
+      instrument_id: instrumentId,
+      side: 'sell',
+      quantity: 50,
+      unit_price: 55,
+      executed_at: '2026-07-02T08:00:00Z',
+    },
+  ]);
+  await login(page);
+  await page.goto(`/instruments/${instrumentId}`);
+  const splits = page.getByRole('region', { name: 'Divisions' });
+
+  // la confirmation annulée n'envoie rien
+  page.once('dialog', (d) => void d.dismiss());
+  await splits.getByRole('button', { name: 'Supprimer' }).click();
+  await expect(splits.getByText('1 ancien → 10 nouveaux')).toBeVisible();
+
+  page.once('dialog', (d) => void d.accept());
+  await splits.getByRole('button', { name: 'Supprimer' }).click();
+  await expect(page.getByText('Division refusée')).toBeVisible();
+  await expect(splits.getByText('1 ancien → 10 nouveaux')).toBeVisible();
+  const left = await admin.from('splits').select('id').eq('instrument_id', instrumentId);
+  expect(left.data).toHaveLength(1);
+});

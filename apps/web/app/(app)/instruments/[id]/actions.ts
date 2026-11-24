@@ -32,17 +32,28 @@ export async function addSplit(instrumentId: string, formData: FormData) {
     const message =
       error.code === '23505'
         ? 'Une division existe déjà à cette date'
-        : `Erreur : ${error.message}`;
+        : error.code === '23514'
+          ? error.message // division qui rendrait une position négative (message de la base)
+          : `Erreur : ${error.message}`;
     redirect(`${path}?error=${encodeURIComponent(message)}`);
   }
   revalidatePath('/', 'layout');
 }
 
+/**
+ * Suppression d'un split (administrateur). La base la refuse si une vente déjà enregistrée
+ * dépassait alors la position d'un portefeuille : le message est affiché sur la fiche.
+ */
 export async function deleteSplit(instrumentId: string, splitId: string) {
+  const path = `/instruments/${instrumentId}`;
   const supabase = await createClient();
-  await supabase.from('splits').delete().eq('id', splitId);
+  const { error } = await supabase.from('splits').delete().eq('id', splitId);
+  if (error) {
+    const message = error.code === '23514' ? error.message : `Erreur : ${error.message}`;
+    redirect(`${path}?error=${encodeURIComponent(message)}`);
+  }
   revalidatePath('/', 'layout');
-  redirect(`/instruments/${instrumentId}`);
+  redirect(path);
 }
 
 /** ISIN du titre : renseigné une fois par qui le suit, corrigé ensuite par l'administrateur. */
