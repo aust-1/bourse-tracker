@@ -511,16 +511,22 @@ export type Database = {
           created_at: string;
           instrument_id: string;
           user_id: string;
+          watched: boolean;
+          watched_since: string | null;
         };
         Insert: {
           created_at?: string;
           instrument_id: string;
           user_id: string;
+          watched?: boolean;
+          watched_since?: string | null;
         };
         Update: {
           created_at?: string;
           instrument_id?: string;
           user_id?: string;
+          watched?: boolean;
+          watched_since?: string | null;
         };
         Relationships: [
           {
@@ -606,6 +612,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean };
       set_instrument_isin: {
         Args: { p_instrument: string; p_isin: string };
+        Returns: undefined;
+      };
+      set_instrument_watched: {
+        Args: { p_instrument: string; p_watched: boolean };
         Returns: undefined;
       };
       split_factor: {

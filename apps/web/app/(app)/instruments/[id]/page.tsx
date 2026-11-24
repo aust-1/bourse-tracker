@@ -6,6 +6,7 @@ import { InstrumentChart } from '@/components/instrument-chart';
 import { Pl } from '@/components/pl';
 import { IsinSection } from '@/components/isin-section';
 import { SplitsSection } from '@/components/splits-section';
+import { WatchToggle } from '@/components/watch-toggle';
 import { dateTime, eur, num } from '@/lib/format';
 import { portfolioScope } from '@/lib/portfolios';
 import { createClient } from '@/lib/supabase/server';
@@ -88,6 +89,9 @@ export default async function InstrumentPage({
           <p className="text-sm text-slate-500">
             {inst.data.yahoo_symbol} · {inst.data.exchange}
           </p>
+          <div className="mt-2">
+            <WatchToggle instrumentId={inst.data.id} />
+          </div>
         </div>
         {quote.data && (
           <div className="text-right">
