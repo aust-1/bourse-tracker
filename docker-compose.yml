@@ -47,6 +47,8 @@ services:
       context: .
       dockerfile: infra/Dockerfile.worker
     restart: unless-stopped
+    # arrêt propre : le worker termine son cycle (envois d'alertes compris) en moins de 25 s
+    stop_grace_period: 30s
     security_opt:
       - no-new-privileges:true
     environment:

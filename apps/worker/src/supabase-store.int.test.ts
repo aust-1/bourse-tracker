@@ -127,6 +127,45 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     expect((await store.listActiveAlerts()).map((x) => x.id)).toContain(id);
   });
 
+  it('reprend au démarrage une alerte prise mais jamais consignée', async () => {
+    const store = new SupabaseStore(db);
+    const insert = async () =>
+      (
+        await db
+          .from('alerts')
+          .insert({
+            user_id: userId,
+            instrument_id: instrumentId,
+            type: 'price_above',
+            threshold: 100,
+            channels: ['discord'],
+          })
+          .select('id')
+          .single()
+      ).data!.id;
+    const interrupted = await insert();
+    const sent = await insert();
+    const claimedAt = new Date(Date.now() - 10 * 60_000);
+    await store.claimAlert(interrupted, claimedAt);
+    await store.claimAlert(sent, claimedAt);
+    await store.recordAlertEvent({
+      alertId: sent,
+      userId,
+      value: 101,
+      delivery: { discord: 'sent' },
+    });
+
+    const released = await store.releaseInterruptedAlerts(new Date(Date.now() - 2 * 60_000));
+    expect(released).toContain(interrupted);
+    expect(released).not.toContain(sent);
+    const rows = await db.from('alerts').select('id, status').in('id', [interrupted, sent]);
+    expect(Object.fromEntries(rows.data!.map((r) => [r.id, r.status]))).toEqual({
+      [interrupted]: 'active',
+      [sent]: 'triggered',
+    });
+    await db.from('alerts').delete().in('id', [interrupted, sent]);
+  });
+
   it("lit les ordres d'un utilisateur", async () => {
     const orders = await new SupabaseStore(db).getOrders(userId, instrumentId);
     expect(orders).toHaveLength(1);
