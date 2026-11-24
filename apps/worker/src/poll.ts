@@ -73,6 +73,16 @@ export async function pollCycle({
       });
       updated++;
     }
+    // première cotation : nom et place viennent de la source, pas du compte qui a créé le titre
+    const sourceName = q.name?.trim().slice(0, 120);
+    if (!before && sourceName && sourceName !== instrument.name) {
+      await store
+        .setInstrumentSource(instrument.id, { name: sourceName, exchange: q.exchange })
+        .catch((e: unknown) =>
+          log.warn("nom de l'instrument non recalé", { symbol: q.symbol, error: String(e) }),
+        );
+      instrument.name = sourceName;
+    }
     // type d'actif (répartition ETF / actions) : complété une fois, sans bloquer la cote
     if (q.type && !instrument.assetType) {
       await store

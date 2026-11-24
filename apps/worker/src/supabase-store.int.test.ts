@@ -84,6 +84,19 @@ describe.skipIf(!process.env.INTEGRATION)('SupabaseStore + pollCycle (base local
     expect(second.updated).toBe(0);
   });
 
+  it('recale le nom et la place sur la source', async () => {
+    const created = await db
+      .from('instruments')
+      .insert({ yahoo_symbol: 'NOM.PA', name: 'Nom libre', exchange: 'XXX' })
+      .select('id')
+      .single();
+    const id = created.data!.id;
+    await new SupabaseStore(db).setInstrumentSource(id, { name: 'Vrai nom', exchange: 'PAR' });
+    const { data } = await db.from('instruments').select('name, exchange').eq('id', id).single();
+    expect(data).toEqual({ name: 'Vrai nom', exchange: 'PAR' });
+    await db.from('instruments').delete().eq('id', id);
+  });
+
   it('enregistre le statut du cycle', async () => {
     await new SupabaseStore(db).recordCycle({ error: 'test' });
     const { data } = await db.from('worker_status').select('*').eq('id', 1).single();
