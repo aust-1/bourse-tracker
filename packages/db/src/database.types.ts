@@ -254,6 +254,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      notification_email_verifications: {
+        Row: {
+          attempts: number;
+          code_expires_at: string | null;
+          code_hash: string | null;
+          email: string;
+          requested_at: string | null;
+          sent_at: string | null;
+          user_id: string;
+          verified_at: string | null;
+        };
+        Insert: {
+          attempts?: number;
+          code_expires_at?: string | null;
+          code_hash?: string | null;
+          email: string;
+          requested_at?: string | null;
+          sent_at?: string | null;
+          user_id: string;
+          verified_at?: string | null;
+        };
+        Update: {
+          attempts?: number;
+          code_expires_at?: string | null;
+          code_hash?: string | null;
+          email?: string;
+          requested_at?: string | null;
+          sent_at?: string | null;
+          user_id?: string;
+          verified_at?: string | null;
+        };
+        Relationships: [];
+      };
+      notification_test_sends: {
+        Row: {
+          channel: string;
+          sent_at: string;
+          user_id: string;
+        };
+        Insert: {
+          channel: string;
+          sent_at?: string;
+          user_id: string;
+        };
+        Update: {
+          channel?: string;
+          sent_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       orders: {
         Row: {
           created_at: string;
@@ -425,6 +476,7 @@ export type Database = {
           benchmark_symbol: string | null;
           discord_webhook_url: string | null;
           email: string | null;
+          email_verified: boolean;
           income_tax_rate: number;
           last_report_on: string | null;
           last_summary_on: string | null;
@@ -440,6 +492,7 @@ export type Database = {
           benchmark_symbol?: string | null;
           discord_webhook_url?: string | null;
           email?: string | null;
+          email_verified?: boolean;
           income_tax_rate?: number;
           last_report_on?: string | null;
           last_summary_on?: string | null;
@@ -455,6 +508,7 @@ export type Database = {
           benchmark_symbol?: string | null;
           discord_webhook_url?: string | null;
           email?: string | null;
+          email_verified?: boolean;
           income_tax_rate?: number;
           last_report_on?: string | null;
           last_summary_on?: string | null;
@@ -601,9 +655,12 @@ export type Database = {
         Args: { p_instrument: string; p_portfolio: string };
         Returns: undefined;
       };
+      claim_notification_test: { Args: { p_channel: string }; Returns: boolean };
+      confirm_notification_email: { Args: { p_code: string }; Returns: boolean };
       delete_my_account: { Args: never; Returns: undefined };
       invitation_is_valid: { Args: { p_code: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };
+      request_notification_email_code: { Args: never; Returns: undefined };
       set_instrument_isin: {
         Args: { p_instrument: string; p_isin: string };
         Returns: undefined;

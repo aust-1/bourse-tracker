@@ -35,6 +35,7 @@ export interface AlertRow {
 export interface UserSettings {
   userId: string;
   discordWebhookUrl: string | null;
+  /** Adresse des emails : null tant qu'elle n'est pas confirmée */
   email: string | null;
   summaryEnabled: boolean;
   summaryTime: string;
@@ -90,6 +91,18 @@ export interface Store {
   listSettings(): Promise<UserSettings[]>;
   /** Réglages des administrateurs : destinataires des messages système (panne de la source…). */
   listAdminSettings(): Promise<UserSettings[]>;
+  /** Demandes de code de confirmation d'adresse email, en attente d'envoi. */
+  listEmailVerificationRequests(): Promise<{ userId: string; email: string }[]>;
+  /**
+   * Enregistre l'empreinte du code envoyé (la demande est alors servie) ; faux si l'adresse a
+   * changé entre-temps.
+   */
+  saveEmailVerificationCode(
+    userId: string,
+    email: string,
+    codeHash: string,
+    expiresAt: Date,
+  ): Promise<boolean>;
 
   listUserOrders(userId: string): Promise<(Order & { instrumentId: string })[]>;
   listAlertEventsSince(userId: string, since: Date): Promise<AlertEventRow[]>;

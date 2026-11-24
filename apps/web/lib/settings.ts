@@ -98,6 +98,10 @@ export const CHANNEL_NAMES: Record<string, string> = {
   telegram: 'Telegram',
 };
 
+export const TEST_TOO_SOON = 'un message de test vient de partir, réessaie dans une minute';
+export const EMAIL_NOT_VERIFIED =
+  'adresse non confirmée (demande un code de confirmation sous le champ Adresse email)';
+
 /** Message lisible pour le statut d'envoi d'un canal (bouton « envoyer un test »). */
 export function describeDelivery(channel: string, status: string | undefined): string {
   const name = CHANNEL_NAMES[channel] ?? channel;
