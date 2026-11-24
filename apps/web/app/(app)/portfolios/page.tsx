@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { PortfolioForm } from '@/components/portfolio-form';
 import { loadCash } from '@/lib/cash';
 import { eur } from '@/lib/format';
+import { canDeletePortfolio } from '@/lib/portfolio-form';
 import { KIND_LABELS, loadPortfolios } from '@/lib/portfolios';
 import { loadPortfolioData } from '@/lib/queries';
 import { DEFAULT_INCOME_RATE, DEFAULT_SOCIAL_RATE } from '@/lib/settings';
@@ -11,7 +12,12 @@ import { deletePortfolio } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PortfoliosPage() {
+export default async function PortfoliosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
+  const { notice } = await searchParams;
   const supabase = await createClient();
   const [portfolios, data, cash, { data: settings }] = await Promise.all([
     loadPortfolios(supabase),
@@ -22,6 +28,10 @@ export default async function PortfoliosPage() {
   const orderCount = new Map<string, number>();
   for (const o of data.orders) {
     orderCount.set(o.portfolioId, (orderCount.get(o.portfolioId) ?? 0) + 1);
+  }
+  const movementCount = new Map<string, number>();
+  for (const m of cash) {
+    movementCount.set(m.portfolioId, (movementCount.get(m.portfolioId) ?? 0) + 1);
   }
   const quotes = new Map(data.quotes.map((q) => [q.instrumentId, q]));
   const today = parisDate(new Date());
@@ -55,6 +65,12 @@ export default async function PortfoliosPage() {
         Une enveloppe par portefeuille (PEA, PEA-PME, compte-titres). Les ventes sont contrôlées
         portefeuille par portefeuille ; le sélecteur en haut de page filtre tous les écrans.
       </p>
+      {notice === 'not_empty' && (
+        <p role="status" className="card text-sm text-amber-700 dark:text-amber-400">
+          Suppression refusée : ce portefeuille a des ordres ou des mouvements d’espèces, qui
+          seraient effacés avec lui. Supprime-les d’abord.
+        </p>
+      )}
       <section className="card overflow-x-auto p-0">
         <table className="w-full">
           <thead className="border-b border-slate-200 dark:border-slate-800">
@@ -63,12 +79,14 @@ export default async function PortfoliosPage() {
               <th className="th">Type</th>
               <th className="th">Ouvert le</th>
               <th className="th text-right">Ordres</th>
+              <th className="th text-right">Mouvements</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {portfolios.map((p) => {
               const n = orderCount.get(p.id) ?? 0;
+              const movements = movementCount.get(p.id) ?? 0;
               return (
                 <tr key={p.id}>
                   <td className="td">{p.name}</td>
@@ -79,12 +97,17 @@ export default async function PortfoliosPage() {
                       : '—'}
                   </td>
                   <td className="td text-right tabular-nums">{n}</td>
+                  <td className="td text-right tabular-nums">{movements}</td>
                   <td className="td text-right">
                     <div className="flex justify-end gap-3">
                       <Link href={`/portfolios/${p.id}`} className="text-sm underline">
                         Modifier
                       </Link>
-                      {n === 0 && portfolios.length > 1 && (
+                      {canDeletePortfolio({
+                        orders: n,
+                        movements,
+                        portfolios: portfolios.length,
+                      }) && (
                         <form action={deletePortfolio.bind(null, p.id)}>
                           <button className="text-sm text-red-600 underline">Supprimer</button>
                         </form>
