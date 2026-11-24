@@ -1,4 +1,9 @@
-import { adjustForSplits, computePosition, lineReturn, valuePosition } from '@bourse/core';
+import {
+  adjustForSplits,
+  computePositionByPortfolio,
+  lineReturn,
+  valuePosition,
+} from '@bourse/core';
 import { fetchAll } from '@bourse/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -33,7 +38,7 @@ export default async function InstrumentPage({
     fetchAll((from, to) => {
       let q = supabase
         .from('orders')
-        .select('id, side, quantity, unit_price, fees, executed_at')
+        .select('id, portfolio_id, side, quantity, unit_price, fees, executed_at')
         .eq('instrument_id', id);
       if (selected) q = q.eq('portfolio_id', selected.id);
       return q.order('executed_at', { ascending: false }).order('id').range(from, to);
@@ -68,6 +73,7 @@ export default async function InstrumentPage({
   const myOrders = adjustForSplits(
     orders.map((o) => ({
       id: o.id,
+      portfolioId: o.portfolio_id,
       side: o.side,
       quantity: o.quantity,
       unitPrice: o.unit_price,
@@ -76,7 +82,8 @@ export default async function InstrumentPage({
     })),
     splits,
   );
-  const pos = computePosition(myOrders);
+  // « Tous les portefeuilles » : chaque enveloppe rejouée à part, puis additionnée
+  const pos = computePositionByPortfolio(myOrders);
   const v = quote.data ? valuePosition(pos, quote.data.price, quote.data.prev_close) : null;
   const perf = lineReturn(myOrders, pos, quote.data?.price ?? null, dividendTotal);
 

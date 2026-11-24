@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computePosition, OversellError, sortOrders } from './positions';
+import {
+  combinePositions,
+  computePosition,
+  computePositionByPortfolio,
+  OversellError,
+  sortOrders,
+} from './positions';
 import type { Order } from './types';
 
 let n = 0;
@@ -150,5 +156,74 @@ describe('sortOrders', () => {
       },
     ]);
     expect(sorted.map((o) => o.id)).toEqual(['z', 'a', 'b']);
+  });
+});
+
+describe('computePositionByPortfolio', () => {
+  it('rejoue chaque portefeuille à part : la vente du CTO ne prend pas le PRU du PEA', () => {
+    const p = computePositionByPortfolio([
+      {
+        ...order({ side: 'buy', quantity: 10, unitPrice: 100, executedAt: '2026-01-05T10:00:00Z' }),
+        portfolioId: 'pea',
+      },
+      {
+        ...order({ side: 'buy', quantity: 10, unitPrice: 200, executedAt: '2026-01-06T10:00:00Z' }),
+        portfolioId: 'cto',
+      },
+      {
+        ...order({
+          side: 'sell',
+          quantity: 10,
+          unitPrice: 200,
+          executedAt: '2026-01-07T10:00:00Z',
+        }),
+        portfolioId: 'cto',
+      },
+    ]);
+    expect(p).toEqual({ quantity: 10, avgCost: 100, costBasis: 1000, realizedPl: 0 });
+  });
+
+  it('sans portefeuille renseigné : identique à computePosition', () => {
+    const orders = [
+      order({ side: 'buy', quantity: 2, unitPrice: 100, executedAt: '2026-01-05T10:00:00Z' }),
+      order({ side: 'sell', quantity: 1, unitPrice: 130, executedAt: '2026-01-06T10:00:00Z' }),
+    ];
+    expect(computePositionByPortfolio(orders)).toEqual(computePosition(orders));
+  });
+
+  it('vente au-delà de la position d’un portefeuille : refusée même si un autre en détient', () => {
+    expect(() =>
+      computePositionByPortfolio([
+        {
+          ...order({
+            side: 'buy',
+            quantity: 10,
+            unitPrice: 100,
+            executedAt: '2026-01-05T10:00:00Z',
+          }),
+          portfolioId: 'pea',
+        },
+        {
+          ...order({
+            side: 'sell',
+            quantity: 1,
+            unitPrice: 100,
+            executedAt: '2026-01-06T10:00:00Z',
+          }),
+          portfolioId: 'cto',
+        },
+      ]),
+    ).toThrow(OversellError);
+  });
+});
+
+describe('combinePositions', () => {
+  it('position soldée partout : vide, réalisé conservé', () => {
+    expect(
+      combinePositions([
+        { quantity: 0, avgCost: 0, costBasis: 0, realizedPl: 12 },
+        { quantity: 0, avgCost: 0, costBasis: 0, realizedPl: -2 },
+      ]),
+    ).toEqual({ quantity: 0, avgCost: 0, costBasis: 0, realizedPl: 10 });
   });
 });
