@@ -92,6 +92,34 @@ test('alertes : création, condition déjà vraie, pause, ré-armement, suppress
   await expect(page.getByRole('row', { name: /cours ≥/ })).toHaveCount(0);
 });
 
+test('ré-armer une baisse depuis le plus haut repart du cours actuel', async ({ page }) => {
+  const { userId, instrumentId } = await resetData();
+  await admin.from('alerts').insert({
+    user_id: userId,
+    instrument_id: instrumentId,
+    type: 'drawdown_from_high',
+    threshold: -10,
+    channels: ['discord'],
+    status: 'triggered',
+    last_triggered_at: new Date().toISOString(),
+    reference_value: 120,
+  });
+  await login(page);
+  await page.goto('/alerts');
+  const row = page.getByRole('row', { name: /Amundi MSCI World Swap/ });
+  await expect(row).toContainText('plus haut suivi');
+
+  await row.getByRole('button', { name: 'Ré-armer' }).click();
+  await expect(row).toContainText('Active');
+  await expect(row).not.toContainText('plus haut suivi');
+  const stored = await admin
+    .from('alerts')
+    .select('status, reference_value')
+    .eq('type', 'drawdown_from_high')
+    .single();
+  expect(stored.data).toEqual({ status: 'active', reference_value: null });
+});
+
 test('alerte de portefeuille : sans titre, note et réarmement automatique', async ({ page }) => {
   await resetData();
   await login(page);
