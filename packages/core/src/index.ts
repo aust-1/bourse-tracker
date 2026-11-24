@@ -4,6 +4,7 @@ export * from './positions';
 export * from './valuation';
 export * from './alerts';
 export * from './portfolio';
+export * from './total-value';
 export * from './describe';
 export * from './portfolio-view';
 export * from './cash';

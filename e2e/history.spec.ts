@@ -57,6 +57,49 @@ test('historique : courbe, gain hors apports et changement de période', async (
   await expect(page.getByRole('img', { name: /30 dernières séances/ })).toBeVisible();
 });
 
+test('historique avec liquidités : valeur totale, seuls les versements sont des apports', async ({
+  page,
+}) => {
+  const { userId, instrumentId } = await resetData();
+  const pea = await admin.from('portfolios').select('id').eq('user_id', userId).single();
+  const closes = Array.from({ length: 45 }, (_, i) => ({
+    instrument_id: instrumentId,
+    date: dayOffset(45 - i),
+    close: 100 + i,
+  }));
+  expect((await admin.from('price_history').insert(closes)).error).toBeNull();
+  // versement de 10 000 € puis achat de 10 titres à 100 € avec cet argent
+  await admin.from('cash_movements').insert({
+    user_id: userId,
+    portfolio_id: pea.data!.id,
+    kind: 'deposit',
+    amount: 10_000,
+    occurred_on: dayOffset(46),
+  });
+  await admin.from('orders').insert({
+    user_id: userId,
+    instrument_id: instrumentId,
+    side: 'buy',
+    quantity: 10,
+    unit_price: 100,
+    executed_at: `${dayOffset(45)}T10:00:00Z`,
+  });
+
+  await login(page);
+  await page.goto('/history?range=all');
+  // 10 titres à 144 + 9 000 € de liquidités
+  await expect(page.locator('.card', { hasText: 'Valeur actuelle' })).toContainText(
+    /10\s440,00\s€/,
+  );
+  await expect(page.locator('.card', { hasText: 'Apports nets' })).toContainText(/10\s000,00\s€/);
+  await expect(page.locator('.card', { hasText: 'Apports nets' })).toContainText(
+    'Versements moins retraits',
+  );
+  await expect(page.locator('.card', { hasText: 'Gain sur la période' })).toContainText(
+    /\+440,00\s€/,
+  );
+});
+
 test('historique sans ordre', async ({ page }) => {
   await resetData();
   await login(page);

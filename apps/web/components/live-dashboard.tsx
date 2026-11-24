@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { dateTime, eur, num } from '@/lib/format';
 import {
   buildPortfolioView,
+  dayChangePctOnTotal,
   peaEligibility,
   quoteFreshness,
   type InstrumentRow,
@@ -56,7 +57,13 @@ export function LiveDashboard(props: {
   instruments: InstrumentRow[];
   initialQuotes: QuoteRow[];
   /** Liquidités du périmètre affiché (null si aucun mouvement enregistré) */
-  cash?: { balance: number; deposits: number; dividends: number } | null;
+  cash?: {
+    balance: number;
+    deposits: number;
+    dividends: number;
+    /** Versements moins retraits datés d'aujourd'hui */
+    netDepositsToday?: number;
+  } | null;
   /** Portefeuille affiché de type PEA : signale les titres dont l'ISIN est hors EEE */
   peaOnly?: boolean;
 }) {
@@ -130,6 +137,16 @@ export function LiveDashboard(props: {
     [props.orders, props.instruments, quotes],
   );
   const cashBalance = props.cash?.balance ?? null;
+  // liquidités suivies (versements enregistrés) : variation du jour sur la valeur totale de la veille
+  const onTotal = props.cash !== null && props.cash !== undefined && props.cash.deposits > 0;
+  const dayPct = onTotal
+    ? dayChangePctOnTotal({
+        marketValue: totals.marketValue,
+        dayPl: totals.dayPl,
+        cashBalance: props.cash!.balance,
+        netDepositsToday: props.cash!.netDepositsToday ?? 0,
+      })
+    : totals.dayPlPct;
   const split = useMemo(() => {
     const types = new Map(props.instruments.map((i) => [i.id, i.assetType ?? null]));
     return allocation(
@@ -165,11 +182,11 @@ export function LiveDashboard(props: {
           label="Variation du jour"
           hint={
             totals.sessionDate
-              ? `Séance du ${totals.sessionDate.split('-').reverse().join('/')}`
+              ? `Séance du ${totals.sessionDate.split('-').reverse().join('/')}${onTotal ? ' · % sur titres + liquidités' : ''}`
               : undefined
           }
         >
-          <Pl value={totals.dayPl} /> <Pl value={totals.dayPlPct} kind="pct" className="text-sm" />
+          <Pl value={totals.dayPl} /> <Pl value={dayPct} kind="pct" className="text-sm" />
         </Stat>
         <Stat label="Gain latent">
           <Pl value={totals.unrealizedPl} />{' '}
