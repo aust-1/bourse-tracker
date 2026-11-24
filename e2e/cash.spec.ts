@@ -54,3 +54,42 @@ test('mouvements : versement, dividende, liquidités et plafond du PEA', async (
     .click();
   await expect(page.getByTestId('cash-balance')).toContainText('3 998,00');
 });
+
+test('PEA : versement au-delà du plafond et retrait avant 5 ans demandent confirmation', async ({
+  page,
+}) => {
+  const { userId } = await resetData();
+  const pea = await admin.from('portfolios').select('id').eq('user_id', userId).single();
+  await admin.from('portfolios').update({ opened_on: '2024-03-01' }).eq('id', pea.data!.id);
+  await admin.from('cash_movements').insert({
+    user_id: userId,
+    portfolio_id: pea.data!.id,
+    kind: 'deposit',
+    amount: 148_000,
+    occurred_on: '2026-01-02',
+  });
+  await login(page);
+  await page.goto('/cash');
+
+  // versement de 5 000 € : 2 000 € restants, dépassement de 3 000 €
+  await page.getByLabel('Montant net (€)').fill('5 000');
+  await page.getByRole('button', { name: 'Ajouter le mouvement' }).click();
+  const warning = page.getByRole('alert').filter({ hasText: 'plafond du PEA' });
+  await expect(warning).toContainText('il restait 2 000,00 €');
+  await expect(warning).toContainText('dépassement de 3 000,00 €');
+  await expect(page.getByText('Mouvement enregistré.')).toHaveCount(0);
+
+  await page.getByLabel('Enregistrer quand même').check();
+  await page.getByRole('button', { name: 'Ajouter le mouvement' }).click();
+  await expect(page.getByText('Mouvement enregistré.')).toBeVisible();
+
+  // retrait avant les 5 ans (01/03/2029)
+  await page.getByLabel('Type').selectOption('withdrawal');
+  await page.getByLabel('Montant net (€)').fill('100');
+  await page.getByRole('button', { name: 'Ajouter le mouvement' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'clôture du plan' })).toContainText(
+    '01/03/2029',
+  );
+  const left = await admin.from('cash_movements').select('id').eq('kind', 'withdrawal');
+  expect(left.data).toHaveLength(0);
+});

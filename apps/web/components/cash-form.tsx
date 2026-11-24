@@ -112,6 +112,23 @@ export function CashForm({
           {state.error}
         </p>
       )}
+      {state.warnings && state.warnings.length > 0 && !state.error && (
+        <div
+          role="alert"
+          className="flex flex-col gap-2 text-sm text-amber-700 dark:text-amber-400"
+        >
+          <p className="font-medium">Avant d’enregistrer ce mouvement :</p>
+          <ul className="list-disc pl-5">
+            {state.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+          <label className="flex items-center gap-2 text-ink">
+            <input type="checkbox" name="confirm" />
+            Enregistrer quand même (régularisation, saisie volontaire)
+          </label>
+        </div>
+      )}
       {state.saved && !state.error && (
         <p role="status" className="text-sm">
           Mouvement enregistré.
