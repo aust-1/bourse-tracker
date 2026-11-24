@@ -12,7 +12,7 @@ import {
 } from '@bourse/core';
 import type { Logger } from './log';
 import { alertMessage } from './messages';
-import { allFailed, type Notifier } from '@bourse/providers';
+import { allFailed, allFailedPermanently, type Notifier } from '@bourse/providers';
 import type { FreshQuote } from './poll';
 import type { AlertRow, Store } from './store';
 
@@ -21,6 +21,49 @@ interface Deps {
   notifier: Pick<Notifier, 'notify'>;
   log: Logger;
   now?: Date;
+  /** Tentatives d'envoi en échec, d'un cycle à l'autre (une par worker : voir Cycle). */
+  retries?: DeliveryRetries;
+}
+
+/** Délais entre deux tentatives d'envoi d'une alerte : 6 tentatives en un peu moins d'une heure. */
+export const RETRY_DELAYS_MS = [60_000, 2 * 60_000, 5 * 60_000, 10 * 60_000, 30 * 60_000];
+
+/**
+ * Suivi des alertes dont aucun canal n'a abouti : la tentative suivante attend un délai croissant,
+ * et le nombre de tentatives est borné. Tenu en mémoire : un redémarrage du worker repart de zéro,
+ * ce qui borne tout de même les envois à quelques-uns par redémarrage.
+ */
+export class DeliveryRetries {
+  private readonly state = new Map<string, { attempts: number; nextAt: number }>();
+
+  constructor(private readonly delaysMs: readonly number[] = RETRY_DELAYS_MS) {}
+
+  /** Vrai tant que le délai avant la prochaine tentative n'est pas écoulé. */
+  waiting(alertId: string, now: Date): boolean {
+    const s = this.state.get(alertId);
+    return s !== undefined && now.getTime() < s.nextAt;
+  }
+
+  /** Consigne un échec ; renvoie l'heure de la prochaine tentative, ou null si c'était la dernière. */
+  failed(alertId: string, now: Date): Date | null {
+    const attempts = (this.state.get(alertId)?.attempts ?? 0) + 1;
+    const delay = this.delaysMs[attempts - 1];
+    if (delay === undefined) {
+      this.state.delete(alertId);
+      return null;
+    }
+    const nextAt = now.getTime() + delay;
+    this.state.set(alertId, { attempts, nextAt });
+    return new Date(nextAt);
+  }
+
+  attempts(alertId: string): number {
+    return this.state.get(alertId)?.attempts ?? 0;
+  }
+
+  clear(alertId: string): void {
+    this.state.delete(alertId);
+  }
 }
 
 /**
@@ -91,8 +134,9 @@ function contextBuilder(quotes: readonly FreshQuote[], { store, log }: Deps) {
 /**
  * Évalue les alertes contre les cotes du cycle. Une alerte ne part qu'une fois : elle est
  * « prise » (active → triggered) avant l'envoi, ce qui évite les doublons même si deux cycles
- * se chevauchent. Si tous les canaux échouent, elle est remise en `active` et retentée au cycle
- * suivant. Une alerte à réarmement automatique repasse en `active` une fois son délai écoulé et
+ * se chevauchent. Si tous les canaux échouent pour une panne passagère, elle est remise en
+ * `active` et retentée après un délai croissant (`DeliveryRetries`) ; sur une erreur définitive ou
+ * après la dernière tentative, l'échec est consigné dans l'historique. Une alerte à réarmement automatique repasse en `active` une fois son délai écoulé et
  * sa condition redevenue fausse.
  * Hors fenêtre de séance, les cotes sont celles de la veille : on n'évalue rien.
  */
@@ -100,7 +144,7 @@ export async function evaluateAlerts(
   quotes: readonly FreshQuote[],
   deps: Deps,
 ): Promise<{ triggered: number; rearmed: number }> {
-  const { store, notifier, log, now = new Date() } = deps;
+  const { store, notifier, log, now = new Date(), retries = new DeliveryRetries() } = deps;
   if (!isPollingWindow(now) || quotes.length === 0) return { triggered: 0, rearmed: 0 };
 
   const contextOf = contextBuilder(quotes, deps);
@@ -123,6 +167,8 @@ export async function evaluateAlerts(
 
     const result = evaluateAlert({ type: alert.type, threshold: alert.threshold }, ctx);
     if (!result.triggered || result.value === null) continue;
+    // envoi précédent en échec : on attend le délai avant de retenter
+    if (retries.waiting(alert.id, now)) continue;
     if (!(await store.claimAlert(alert.id, now))) continue;
 
     const settings = await store.getSettings(alert.userId);
@@ -138,13 +184,34 @@ export async function evaluateAlerts(
     const delivery = await notifier.notify(settings, alert.channels, message);
 
     if (allFailed(delivery)) {
-      await store.releaseAlert(alert.id);
-      log.warn('alerte non envoyée, nouvelle tentative au prochain cycle', {
+      // panne passagère : nouvelle tentative plus tard (délai croissant, nombre borné) ;
+      // erreur définitive (4xx, réglage invalide) ou dernière tentative : l'échec est consigné
+      // dans l'historique avec l'état de chaque canal, et l'alerte reste « Déclenchée »
+      const retryAt = allFailedPermanently(delivery) ? null : retries.failed(alert.id, now);
+      if (retryAt) {
+        await store.releaseAlert(alert.id);
+        log.warn('alerte non envoyée, nouvelle tentative plus tard', {
+          alert: alert.id,
+          attempt: retries.attempts(alert.id),
+          retryAt: retryAt.toISOString(),
+          delivery,
+        });
+        continue;
+      }
+      retries.clear(alert.id);
+      await store.recordAlertEvent({
+        alertId: alert.id,
+        userId: alert.userId,
+        value: result.value,
+        delivery,
+      });
+      log.warn('alerte non envoyée : échec consigné dans l’historique', {
         alert: alert.id,
         delivery,
       });
       continue;
     }
+    retries.clear(alert.id);
 
     await store.recordAlertEvent({
       alertId: alert.id,

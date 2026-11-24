@@ -1,6 +1,6 @@
 import type { AlertType } from '@bourse/core';
 import { describe, expect, it, vi } from 'vitest';
-import { evaluateAlerts } from './alerts';
+import { DeliveryRetries, evaluateAlerts, RETRY_DELAYS_MS } from './alerts';
 import { silentLogger } from './log';
 import { MemoryStore } from './memory-store';
 import type { Delivery, Message } from '@bourse/providers';
@@ -140,6 +140,90 @@ describe('evaluateAlerts', () => {
     expect(r.triggered).toBe(0);
     expect(store.alerts[0]!.status).toBe('active');
     expect(store.events).toHaveLength(0);
+  });
+
+  it('panne passagère : nouvelles tentatives espacées puis échec consigné', async () => {
+    const store = setup('price_above', 105);
+    const delivery = {
+      discord: 'error: Discord HTTP 503',
+      email: 'error: Resend HTTP 500',
+    } as const;
+    const notifier = notifierReturning(delivery);
+    const retries = new DeliveryRetries();
+    const at = (ms: number) => new Date(inSession.getTime() + ms);
+    const run = (t: Date) =>
+      evaluateAlerts([quote(106)], { store, notifier, log: silentLogger, now: t, retries });
+
+    await run(at(0));
+    expect(notifier.notify).toHaveBeenCalledTimes(1);
+    // cycle suivant (30 s) : le délai d'une minute n'est pas écoulé, pas d'envoi
+    await run(at(30_000));
+    expect(notifier.notify).toHaveBeenCalledTimes(1);
+    expect(store.alerts[0]!.status).toBe('active');
+
+    // chaque tentative attend son délai ; la dernière consigne l'échec
+    let t = 0;
+    for (const delay of RETRY_DELAYS_MS) {
+      t += delay;
+      await run(at(t));
+    }
+    expect(notifier.notify).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1);
+    expect(store.alerts[0]!.status).toBe('triggered');
+    expect(store.events).toHaveLength(1);
+    expect(store.events[0]!.delivery).toEqual(delivery);
+
+    // plus aucun envoi ensuite
+    await run(at(t + 3_600_000));
+    expect(notifier.notify).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1);
+  });
+
+  it('erreur définitive (webhook supprimé) : échec consigné aussitôt, alerte déclenchée', async () => {
+    const store = setup('price_above', 105);
+    store.alerts[0]!.channels = ['discord'];
+    const notifier = notifierReturning({ discord: 'error: Discord HTTP 404' });
+    const retries = new DeliveryRetries();
+    await evaluateAlerts([quote(106)], {
+      store,
+      notifier,
+      log: silentLogger,
+      now: inSession,
+      retries,
+    });
+    expect(store.alerts[0]!.status).toBe('triggered');
+    expect(store.events).toHaveLength(1);
+    expect(store.events[0]!.delivery).toEqual({ discord: 'error: Discord HTTP 404' });
+    await evaluateAlerts([quote(106)], {
+      store,
+      notifier,
+      log: silentLogger,
+      now: new Date(inSession.getTime() + 60 * 60_000),
+      retries,
+    });
+    expect(notifier.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('succès après un échec passager : envoi enregistré normalement', async () => {
+    const store = setup('price_above', 105);
+    const notifier = notifierReturning({ discord: 'error: Discord HTTP 500' });
+    const retries = new DeliveryRetries();
+    await evaluateAlerts([quote(106)], {
+      store,
+      notifier,
+      log: silentLogger,
+      now: inSession,
+      retries,
+    });
+    notifier.notify.mockResolvedValue({ discord: 'sent' });
+    const r = await evaluateAlerts([quote(106)], {
+      store,
+      notifier,
+      log: silentLogger,
+      now: new Date(inSession.getTime() + RETRY_DELAYS_MS[0]!),
+      retries,
+    });
+    expect(r.triggered).toBe(1);
+    expect(store.events[0]!.delivery).toEqual({ discord: 'sent' });
+    expect(retries.attempts('a1')).toBe(0);
   });
 
   it('succès partiel : enregistrée avec le détail par canal', async () => {

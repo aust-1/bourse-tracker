@@ -231,3 +231,28 @@ export function allFailed(d: Delivery): boolean {
     !statuses.some((s) => s === 'sent')
   );
 }
+
+/**
+ * Erreur définitive d'un canal : réessayer ne servirait à rien (webhook supprimé, sujet refusé,
+ * adresse rejetée : HTTP 4xx hors 408 et 429 ; réglage invalide ou absent). Une panne passagère
+ * (5xx, 429, délai dépassé, réseau) ne l'est pas.
+ */
+export function isPermanentError(status: DeliveryStatus): boolean {
+  if (!status.startsWith('error')) return false;
+  const http = /HTTP (\d{3})/.exec(status);
+  if (http) {
+    const code = Number(http[1]);
+    return code >= 400 && code < 500 && code !== 408 && code !== 429;
+  }
+  return /invalide|absente?|non autorisé/.test(status);
+}
+
+/** Échec de tous les canaux, et aucun ne vaut la peine d'être retenté. */
+export function allFailedPermanently(d: Delivery): boolean {
+  return (
+    allFailed(d) &&
+    Object.values(d)
+      .filter((s) => s.startsWith('error'))
+      .every(isPermanentError)
+  );
+}
