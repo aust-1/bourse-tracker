@@ -80,11 +80,12 @@ Décisions à connaître :
 
 ## Développement
 
-Prérequis : Node 22+, pnpm, Docker (pour Supabase en local).
+Prérequis : Node 22+, pnpm, Docker (pour Supabase en local). La CLI Supabase est appelée dans sa
+version fixée par la CI (`.github/workflows/ci.yml`), pour utiliser les mêmes images en local.
 
 ```bash
 pnpm install
-npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta
+npx supabase@3.2.0 start -x studio,imgproxy,vector,logflare,edge-runtime,storage-api,postgres-meta
 cp .env.example .env   # pour le worker ; le web lit apps/web/.env.local (URL et clé anon locales)
 pnpm --filter @bourse/web dev
 ```
