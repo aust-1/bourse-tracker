@@ -134,3 +134,28 @@ test('liste des ordres : totaux de la sélection, filtre par dates, pagination',
   await expect(page.getByTestId('orders-totals')).toContainText('10 ordres');
   await expect(page.getByText(/Page \d/)).toHaveCount(0);
 });
+
+test('recherche indisponible : message distinct et saisie directe du symbole', async ({ page }) => {
+  // la source de prix est en panne : la route renvoie 502
+  await page.route('**/api/instruments/search*', (route) =>
+    route.fulfill({ status: 502, json: { hits: [], error: 'Recherche indisponible' } }),
+  );
+  await login(page);
+  await page.goto('/orders/new');
+  await page.getByLabel('Instrument').fill('cw8.pa');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Recherche indisponible' }),
+  ).toBeVisible();
+  await expect(page.getByText('Aucun résultat')).toHaveCount(0);
+
+  // symbole Yahoo connu saisi directement
+  await page.getByRole('button', { name: 'Utiliser « CW8.PA » comme symbole Yahoo' }).click();
+  await expect(page.getByText('Symbole : CW8.PA')).toBeVisible();
+  await page.getByLabel('Achat').check();
+  await page.getByLabel('Quantité').fill('1');
+  await page.getByLabel('Prix unitaire (€)').fill('100');
+  await page.getByLabel(/Date et heure/).fill('2026-01-05T10:00');
+  await page.getByRole('button', { name: "Ajouter l'ordre" }).click();
+  await page.waitForURL('**/orders');
+  await expect(page.getByRole('row', { name: /Amundi MSCI World Swap/ })).toHaveCount(1);
+});
